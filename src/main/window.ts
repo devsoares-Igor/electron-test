@@ -120,23 +120,6 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
 
     // Load the app
     view.webContents.loadURL(APP_URL);
-    if (IS_LOCAL) view.webContents.openDevTools();
-
-    // Abre DevTools automaticamente após o carregamento (para debug)
-    view.webContents.once("did-stop-loading", () => {
-        view.webContents.openDevTools({ mode: "detach" });
-    });
-
-    // F12 abre/fecha DevTools em qualquer ambiente
-    view.webContents.on("before-input-event", (_event, input) => {
-        if (input.key === "F12" && input.type === "keyDown") {
-            if (view.webContents.isDevToolsOpened()) {
-                view.webContents.closeDevTools();
-            } else {
-                view.webContents.openDevTools({ mode: "detach" });
-            }
-        }
-    });
 
     // Offline fallback
     view.webContents.on("did-fail-load", (_e, errorCode, _desc, validatedURL) => {

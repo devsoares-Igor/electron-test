@@ -6,6 +6,7 @@
 declare const __ELECTRON_ENV__: string;
 declare const __APP_URL__: string;
 declare const __IS_LOCAL__: boolean;
+declare const __DEVTOOLS_PASSWORD__: string;
 
 export type ElectronEnv = "local" | "school" | "staging" | "realms";
 
@@ -23,6 +24,9 @@ export const APP_URL =
     typeof __APP_URL__ !== "undefined" ? __APP_URL__ : ENV_MAP[CURRENT_ENV].appUrl;
 export const IS_LOCAL =
     typeof __IS_LOCAL__ !== "undefined" ? __IS_LOCAL__ : ENV_MAP[CURRENT_ENV].isLocal;
+
+export const DEVTOOLS_PASSWORD: string =
+    typeof __DEVTOOLS_PASSWORD__ !== "undefined" ? __DEVTOOLS_PASSWORD__ : "realms-dev";
 
 /** Base hostname derived from APP_URL (e.g. "schoolwebv2.ip.tv") */
 export const APP_HOST = (() => {

@@ -4,9 +4,9 @@ import { registerAudioDeviceHandlers } from "./audio-devices";
 import { registerScreenCaptureHandlers } from "./screen-capture";
 import { registerWindowControlHandlers } from "./window-control";
 
-export function registerIpcHandlers(_win: BrowserWindow, view: WebContentsView): void {
+export function registerIpcHandlers(win: BrowserWindow, view: WebContentsView): void {
     registerScreenCaptureHandlers();
-    registerWindowControlHandlers(view);
+    registerWindowControlHandlers(win, view);
     registerAudioDeviceHandlers();
     registerAudioCaptureHandlers();
 }

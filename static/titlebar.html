@@ -2,6 +2,7 @@
 <html>
     <head>
         <meta charset="UTF-8" />
+        <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
         <style>
             * {
                 margin: 0;
@@ -14,7 +15,7 @@
                 background: #313338;
                 overflow: hidden;
                 -webkit-app-region: no-drag;
-                font-family: "Segoe UI", system-ui, sans-serif;
+                font-family: "Inter", "Segoe UI", system-ui, sans-serif;
             }
             #drag-bar {
                 position: fixed;
@@ -30,7 +31,6 @@
             }
             #reload-btn {
                 -webkit-app-region: no-drag;
-                margin-left: auto;
                 width: 28px;
                 height: 28px;
                 border: none;
@@ -61,6 +61,118 @@
             #reload-btn.spinning svg {
                 animation: spin 0.5s linear;
             }
+            #devtools-btn {
+                -webkit-app-region: no-drag;
+                width: 28px;
+                height: 28px;
+                border: none;
+                background: transparent;
+                color: #b5bac1;
+                cursor: pointer;
+                border-radius: 4px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0;
+                transition: background 0.15s, color 0.15s;
+                outline: none;
+            }
+            #devtools-btn:hover {
+                background: rgba(255, 255, 255, 0.08);
+                color: #f2f3f5;
+            }
+            #devtools-btn:active {
+                background: rgba(255, 255, 255, 0.14);
+            }
+            #devtools-btn svg {
+                width: 16px;
+                height: 16px;
+            }
+            #titlebar-buttons {
+                margin-left: auto;
+                display: flex;
+                gap: 2px;
+                align-items: center;
+            }
+            /* Modal */
+            #devtools-modal {
+                display: none;
+                position: fixed;
+                inset: 0;
+                z-index: 9999;
+                align-items: center;
+                justify-content: center;
+            }
+            #devtools-overlay {
+                position: absolute;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.55);
+            }
+            #devtools-dialog {
+                position: relative;
+                background: #2b2d31;
+                border: 1px solid #1e1f22;
+                border-radius: 8px;
+                padding: 20px 20px 16px;
+                width: 260px;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            }
+            #devtools-dialog p {
+                color: #f2f3f5;
+                font-size: 13px;
+                font-weight: 600;
+                margin: 0;
+            }
+            #devtools-input {
+                width: 100%;
+                box-sizing: border-box;
+                background: #1e1f22;
+                border: 1.5px solid #3a3c41;
+                border-radius: 4px;
+                color: #f2f3f5;
+                font-size: 13px;
+                padding: 6px 8px;
+                outline: none;
+                transition: border-color 0.15s;
+            }
+            #devtools-input:focus {
+                border-color: #5865f2;
+            }
+            #devtools-input.error {
+                border-color: #ed4245;
+                animation: shake 0.3s linear;
+            }
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25%       { transform: translateX(-5px); }
+                75%       { transform: translateX(5px); }
+            }
+            #devtools-actions {
+                display: flex;
+                justify-content: flex-end;
+                gap: 8px;
+            }
+            #devtools-actions button {
+                border: none;
+                border-radius: 4px;
+                font-size: 13px;
+                padding: 5px 14px;
+                cursor: pointer;
+                outline: none;
+            }
+            #devtools-cancel {
+                background: transparent;
+                color: #b5bac1;
+            }
+            #devtools-cancel:hover { color: #f2f3f5; }
+            #devtools-confirm {
+                background: #5865f2;
+                color: #fff;
+            }
+            #devtools-confirm:hover { background: #4752c4; }
             @keyframes spin {
                 from {
                     transform: rotate(0deg);
@@ -73,27 +185,38 @@
     </head>
     <body>
         <div id="drag-bar">
-            <button id="reload-btn" title="Recarregar (F5)">
-                <!-- MUI Refresh icon -->
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path
-                        d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"
+            <div id="titlebar-buttons">
+                <button id="devtools-btn" title="DevTools">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M20 8h-2.81c-.45-.78-1.07-1.45-1.81-1.96l1.41-1.41-1.42-1.42-1.92 1.92C13 5.04 12.51 5 12 5s-1 .04-1.45.13L8.62 3.21 7.2 4.63l1.41 1.41C7.88 6.55 7.27 7.22 6.81 8H4v2h2.09c-.05.33-.09.66-.09 1v1H4v2h2v1c0 .34.04.67.09 1H4v2h2.81c1.04 1.79 2.97 3 5.19 3s4.15-1.21 5.19-3H20v-2h-2.09c.05-.33.09-.66.09-1v-1h2v-2h-2v-1c0-.34-.04-.67-.09-1H20V8zm-4 4v3c0 2.21-1.79 4-4 4s-4-1.79-4-4v-3c0-2.21 1.79-4 4-4s4 1.79 4 4z"/>
+                    </svg>
+                </button>
+                <button id="reload-btn" title="Recarregar (F5)">
+                    <!-- MUI Refresh icon -->
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"
                     />
                 </svg>
             </button>
+            </div>
         </div>
+
         <script>
-            const btn = document.getElementById("reload-btn");
-            btn.addEventListener("click", () => {
-                btn.classList.add("spinning");
-                btn.addEventListener("animationend", () => btn.classList.remove("spinning"), {
+            const reloadBtn = document.getElementById("reload-btn");
+            reloadBtn.addEventListener("click", () => {
+                reloadBtn.classList.add("spinning");
+                reloadBtn.addEventListener("animationend", () => reloadBtn.classList.remove("spinning"), {
                     once: true,
                 });
                 window.titlebarAPI.reload();
             });
-            // F5 também recarrega
             document.addEventListener("keydown", (e) => {
                 if (e.key === "F5") window.titlebarAPI.reload();
+            });
+
+            document.getElementById("devtools-btn").addEventListener("click", () => {
+                window.titlebarAPI.showDevtoolsDialog();
             });
         </script>
     </body>

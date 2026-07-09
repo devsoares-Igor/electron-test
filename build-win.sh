@@ -33,11 +33,9 @@ cp package.json           "$WIN_DIR/package.json"
 echo "→ [3/4] Instalando dependências no Windows (se necessário)..."
 powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "
   Set-Location '$WIN_DIR_WIN'
-  \$env:PATH = [System.Environment]::GetEnvironmentVariable('PATH','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('PATH','User')
-  if (-not (Test-Path 'node_modules\\electron-builder')) {
-    Write-Host '  Instalando npm packages...'
-    npm install --ignore-scripts
-  }
+  \$env:PATH = 'C:\Program Files\nodejs;' + [System.Environment]::GetEnvironmentVariable('PATH','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('PATH','User')
+  Write-Host '  Instalando npm packages...'
+  npm install --ignore-scripts 2>&1 | Select-Object -Last 3
   if (-not (Test-Path 'node_modules\\electron\\dist\\electron.exe')) {
     Write-Host '  Baixando binário do Electron...'
     node node_modules\\electron\\install.js
@@ -56,7 +54,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "
   }
 
   \$env:CSC_IDENTITY_AUTO_DISCOVERY = 'false'
-  & cmd.exe /c 'node_modules\\.bin\\electron-builder.cmd' --win --x64 --config.directories.output=out\\$ENV 2>&1
+  \$env:PATH = 'C:\Program Files\nodejs;' + [System.Environment]::GetEnvironmentVariable('PATH','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('PATH','User')
+  node node_modules\electron-builder\out\cli\cli.js --win --x64 --config.npmRebuild=false --config.directories.output=out\$ENV 2>&1
 "
 
 echo ""

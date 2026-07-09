@@ -16,6 +16,7 @@ if (!ENVS[electronEnv]) {
 }
 
 const { appUrl, isLocal } = ENVS[electronEnv];
+const devtoolsPassword = process.env.DEVTOOLS_PASSWORD || "realms-dev";
 console.log(`→ Buildando para ambiente: ${electronEnv} → ${appUrl}`);
 
 mkdirSync("build", { recursive: true });
@@ -38,7 +39,7 @@ await Promise.all([
         platform: "node",
         target: "node20",
         external: ["electron", "ffmpeg-static"],
-        define: envDefine,
+        define: { ...envDefine, "__DEVTOOLS_PASSWORD__": JSON.stringify(devtoolsPassword) },
     }),
 
     // Main preload (contextIsolation: false — see src/preload/main.ts)
@@ -85,7 +86,7 @@ await Promise.all([
 ]);
 
 // Copia HTMLs estáticos e ícones para build/
-for (const f of ["picker.html", "splash.html", "offline.html", "titlebar.html", "logo_loading.svg"]) {
+for (const f of ["picker.html", "splash.html", "offline.html", "titlebar.html", "devtools-dialog.html", "logo_loading.svg"]) {
     copyFileSync(join("static", f), join("build", f));
 }
 

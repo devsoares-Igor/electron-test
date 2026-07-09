@@ -1,0 +1,98 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+                background: #2b2d31;
+                font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+                padding: 20px;
+                gap: 12px;
+                -webkit-app-region: drag;
+                user-select: none;
+            }
+            p {
+                color: #f2f3f5;
+                font-size: 13px;
+                font-weight: 600;
+                -webkit-app-region: no-drag;
+            }
+            input {
+                -webkit-app-region: no-drag;
+                width: 100%;
+                background: #1e1f22;
+                border: 1.5px solid #3a3c41;
+                border-radius: 4px;
+                color: #f2f3f5;
+                font-size: 13px;
+                padding: 7px 10px;
+                outline: none;
+                transition: border-color 0.15s;
+            }
+            input:focus { border-color: #5865f2; }
+            input.error {
+                border-color: #ed4245;
+                animation: shake 0.3s linear;
+            }
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25%       { transform: translateX(-4px); }
+                75%       { transform: translateX(4px); }
+            }
+            .actions {
+                -webkit-app-region: no-drag;
+                display: flex;
+                justify-content: flex-end;
+                gap: 8px;
+            }
+            button {
+                border: none;
+                border-radius: 4px;
+                font-size: 13px;
+                padding: 5px 14px;
+                cursor: pointer;
+                outline: none;
+            }
+            #cancel { background: transparent; color: #b5bac1; }
+            #cancel:hover { color: #f2f3f5; }
+            #confirm { background: #5865f2; color: #fff; }
+            #confirm:hover { background: #4752c4; }
+        </style>
+    </head>
+    <body>
+        <p>Senha para DevTools</p>
+        <input id="pwd" type="password" placeholder="Digite a senha..." />
+        <div class="actions">
+            <button id="cancel">Cancelar</button>
+            <button id="confirm">Abrir</button>
+        </div>
+        <script>
+            const input = document.getElementById("pwd");
+
+            async function submit() {
+                const ok = await window.titlebarAPI.openDevtools(input.value);
+                if (ok) {
+                    window.close();
+                } else {
+                    input.classList.add("error");
+                    input.value = "";
+                    setTimeout(() => { input.classList.remove("error"); input.focus(); }, 400);
+                }
+            }
+
+            document.getElementById("confirm").addEventListener("click", submit);
+            document.getElementById("cancel").addEventListener("click", () => window.close());
+            input.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") submit();
+                if (e.key === "Escape") window.close();
+            });
+
+            setTimeout(() => input.focus(), 50);
+        </script>
+    </body>
+</html>
