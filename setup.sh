@@ -48,6 +48,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "
   Write-Host '  Baixando binário do Electron...'
   node node_modules\\electron\\install.js
 
+  Write-Host '  Baixando binário do FFmpeg...'
+  node node_modules\\ffmpeg-static\\install.js
+
   Write-Host '  Verificando electron-builder...'
   if (Test-Path 'node_modules\\electron-builder') {
     Write-Host '  ✓ electron-builder OK'

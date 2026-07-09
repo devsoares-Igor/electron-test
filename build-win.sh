@@ -40,6 +40,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "
     Write-Host '  Baixando binário do Electron...'
     node node_modules\\electron\\install.js
   }
+  Write-Host '  Baixando/verificando FFmpeg...'
+  node node_modules\\ffmpeg-static\\install.js
   Write-Host '  Dependências OK'
 "
 

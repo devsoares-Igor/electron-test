@@ -33,10 +33,15 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "
     node node_modules\\electron\\install.js
   }
 
-  # 0b. Garante ffmpeg-static (binário Windows para captura DirectShow)
-  if (-not (Test-Path 'node_modules\\ffmpeg-static')) {
-    Write-Host '→ Instalando ffmpeg-static...'
-    npm install ffmpeg-static --no-save 2>&1
+  # 0b. Garante o binário do FFmpeg (necessário para captura de áudio)
+  Write-Host '→ Verificando FFmpeg...'
+  \$ffmpegExe = node -e "try{console.log(require('ffmpeg-static'))}catch{console.log('')}" 2>\$null
+  if (-not \$ffmpegExe -or -not (Test-Path \$ffmpegExe)) {
+    Write-Host '  FFmpeg não encontrado, baixando...'
+    node node_modules\\ffmpeg-static\\install.js
+    Write-Host '  ✓ FFmpeg baixado'
+  } else {
+    Write-Host "  ✓ FFmpeg OK: \$ffmpegExe"
   }
 
   # 0c. Garante cross-env (necessário para npm run dist:school no Windows)
@@ -45,19 +50,14 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "
     npm install cross-env --no-save 2>&1
   }
 
-  # 1. Mata processos antes de copiar o exe
+  # 1. Mata processos anteriores
   Get-Process -Name 'electron','realms' -ErrorAction SilentlyContinue | Stop-Process -Force
   Start-Sleep -Milliseconds 800
 
-  # 2. Cria/atualiza realms.exe (cópia do electron.exe com ícone customizado)
-  \$rcedit  = 'node_modules\\rcedit\\bin\\rcedit-x64.exe'
-  \$realms  = 'node_modules\\electron\\dist\\realms.exe'
-  \$icoPath = Resolve-Path 'build\\icons\\icon.ico' | Select-Object -ExpandProperty Path
-  Copy-Item 'node_modules\\electron\\dist\\electron.exe' \$realms -Force
-  if (Test-Path \$rcedit) { & \$rcedit \$realms --set-icon \$icoPath }
-
-  # 3. Lança (sem flags de runtime — ambiente está baked no build)
-  Start-Process -FilePath \$realms -ArgumentList 'build/main.js' -WorkingDirectory '$WIN_DIR_WIN'
+  # 2. Lança com caminho absoluto (garante abertura da janela)
+  \$exe  = '$WIN_DIR_WIN\node_modules\electron\dist\electron.exe'
+  \$main = '$WIN_DIR_WIN\build\main.js'
+  Start-Process -FilePath \$exe -ArgumentList \$main,'--no-sandbox','--disable-gpu' -WorkingDirectory '$WIN_DIR_WIN'
   Write-Host 'OK'
 "
 

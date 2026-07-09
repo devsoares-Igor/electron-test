@@ -1,5 +1,10 @@
 import { ipcRenderer } from "electron";
 
+// ─── Debug log (forwarded to main process → C:\Users\devso\electron-audio.log) ─
+function dbg(msg: string): void {
+    ipcRenderer.send("debug-log", msg);
+}
+
 // contextIsolation is intentionally disabled for this WebContentsView.
 // The getDisplayMedia override below must run in the same JavaScript context as
 // the renderer so that calls to navigator.mediaDevices.getDisplayMedia() are
@@ -141,6 +146,7 @@ let _keepAliveTimer: ReturnType<typeof setTimeout> | null = null;
 let _switchTimer: ReturnType<typeof setTimeout> | null = null;
 
 function stopVMixCapture(): void {
+    dbg(`stopVMixCapture: stopping FFmpeg (device=${_currentDevice})`);
     if (_keepAliveTimer) { clearTimeout(_keepAliveTimer); _keepAliveTimer = null; }
     if (_switchTimer) { clearTimeout(_switchTimer); _switchTimer = null; }
     if (_captureChunkListener) {
@@ -220,24 +226,18 @@ async function createDShowStream(deviceName: string): Promise<MediaStream> {
     ipcRenderer.on("dshow-chunk", onChunk);
 
     const started = await ipcRenderer.invoke("dshow-start", deviceName) as boolean;
+    dbg(`createDShowStream: dshow-start returned started=${started} for "${deviceName}"`);
     if (!started) {
         ipcRenderer.removeListener("dshow-chunk", onChunk);
         _captureChunkListener = null; _currentDevice = null; _audioReady = null;
-        throw new DOMException("FFmpeg não encontrado. Reinstale o app.", "NotReadableError");
+        throw new DOMException(`Não foi possível abrir "${deviceName}". Verifique se o dispositivo está ativo.`, "NotReadableError");
     }
 
-    const gotAudio = await new Promise<boolean>((resolve) => {
-        const t = setTimeout(() => resolve(false), 4_000);
-        ipcRenderer.once("dshow-chunk", () => { clearTimeout(t); resolve(true); });
-        ipcRenderer.once("dshow-error", () => { clearTimeout(t); resolve(false); });
-    });
-
-    if (!gotAudio) {
-        ipcRenderer.removeListener("dshow-chunk", onChunk);
-        _captureChunkListener = null; _currentDevice = null; _audioReady = null;
-        await ipcRenderer.invoke("dshow-stop").catch(() => { /* ignore */ });
-        throw new DOMException(`"${deviceName}" não produziu áudio — verifique se o vMix está ativo.`, "NotReadableError");
-    }
+    dbg(`createDShowStream: device open OK, resolving audioReady for "${deviceName}"`);
+    // Device is confirmed open — resolve so concurrent callers can proceed.
+    // Silence is valid (e.g., vMix Bus A with no content yet); audio flows when
+    // content plays. Do NOT block on chunks here — that caused fallback to wrong device.
+    resolveAudioReady();
 
     const onFfmpegEnd = () => {
         if (_captureChunkListener === onChunk) {
@@ -301,7 +301,9 @@ Object.defineProperty(navigator.mediaDevices, "getUserMedia", {
                 if (_switchTimer) { clearTimeout(_switchTimer); _switchTimer = null; }
 
                 const name = decodeURIComponent(deviceId.slice(DS_PREFIX.length));
+                dbg(`getUserMedia: DS device requested="${name}"`);
                 const audioStream = await createDShowStream(name);
+                dbg(`getUserMedia: DS stream created ok for "${name}"`);
 
                 if (constraints?.video) {
                     try {
@@ -321,6 +323,7 @@ Object.defineProperty(navigator.mediaDevices, "getUserMedia", {
             // Device não-vMix com deviceId explícito: agenda parada do FFmpeg
             // (usuário trocou para microfone normal)
             if (deviceId && _captureChunkListener) {
+                dbg(`getUserMedia: non-DS device selected (id=${deviceId.slice(0,30)}), scheduling stopVMixCapture in 2s`);
                 if (_switchTimer) clearTimeout(_switchTimer);
                 _switchTimer = setTimeout(stopVMixCapture, 2_000);
             }

@@ -111,8 +111,8 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
         if (!win.isVisible()) win.show();
         if (!splash.isDestroyed()) splash.destroy();
     };
-    view.webContents.once("did-stop-loading", () => setTimeout(revealWindow, 500));
-    const splashTimeout = setTimeout(revealWindow, 30_000);
+    view.webContents.once("did-stop-loading", () => setTimeout(revealWindow, 300));
+    const splashTimeout = setTimeout(revealWindow, 8_000);
 
     // Permissions + network
     applyPermissions(win);
