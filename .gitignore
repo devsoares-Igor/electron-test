@@ -1,0 +1,15 @@
+# Build outputs (generated — do not commit)
+build/
+dist/
+out/
+renderer/
+
+# Dependencies
+node_modules/
+
+# Sourcemaps
+*.map
+
+# OS
+.DS_Store
+Thumbs.db

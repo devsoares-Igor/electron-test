@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Sem conexão</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                background: #313338;
+                color: #f2f3f5;
+                font-family:
+                    "Segoe UI",
+                    system-ui,
+                    -apple-system,
+                    sans-serif;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+            }
+
+            /* MUI Card */
+            .card {
+                background: #2b2d31;
+                border-radius: 12px;
+                padding: 48px 40px 40px;
+                text-align: center;
+                max-width: 400px;
+                width: 90%;
+                box-shadow: 0 8px 40px rgba(0, 0, 0, 0.45);
+            }
+
+            .icon-wrap {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 72px;
+                height: 72px;
+                border-radius: 50%;
+                background: rgba(88, 101, 242, 0.12);
+                margin-bottom: 24px;
+                color: #5865f2;
+            }
+
+            /* MUI Typography h5 */
+            h5 {
+                font-size: 20px;
+                font-weight: 500;
+                line-height: 1.334;
+                color: #f2f3f5;
+                margin-bottom: 10px;
+            }
+
+            /* MUI Typography body2 */
+            .subtitle {
+                font-size: 14px;
+                line-height: 1.6;
+                color: #b5bac1;
+                margin-bottom: 32px;
+            }
+
+            /* MUI Button contained */
+            .btn {
+                background: #5865f2;
+                color: #fff;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 24px;
+                font-size: 14px;
+                font-weight: 500;
+                font-family: inherit;
+                letter-spacing: 0.4px;
+                cursor: pointer;
+                transition:
+                    background 0.2s,
+                    box-shadow 0.2s;
+                box-shadow: 0 2px 6px rgba(88, 101, 242, 0.35);
+                text-transform: none;
+            }
+
+            .btn:hover {
+                background: #4752c4;
+                box-shadow: 0 4px 12px rgba(88, 101, 242, 0.4);
+            }
+
+            .btn:active {
+                background: #3c45a5;
+            }
+
+            /* MUI Divider */
+            .divider {
+                height: 1px;
+                background: rgba(255, 255, 255, 0.08);
+                margin: 32px 0 20px;
+            }
+
+            /* caption */
+            .caption {
+                font-size: 11px;
+                color: #80848e;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="card">
+            <div class="icon-wrap" id="icon-wrap">
+                <!-- WifiOff (MUI) — padrão; trocado por JS conforme ?reason= -->
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                        d="M22.99 9C19.15 5.16 13.8 3.76 8.84 4.78l2.52 2.52c3.47-.17 6.99 1.05 9.63 3.7zm-4 4c-1.29-1.29-2.84-2.13-4.49-2.56l3.53 3.53zM2 3.05 5.07 6.1C3.6 6.82 2.22 7.78 1 9l1.99 2c1.24-1.24 2.67-2.16 4.2-2.77l2.24 2.24C7.81 10.89 6.27 11.73 5 13v.01L6.99 15c1.36-1.36 3.14-2.04 4.92-2.06L18.98 20l1.27-1.26L3.29 1.79zM9 17l3 3 3-3c-1.65-1.66-4.34-1.66-6 0"
+                    />
+                </svg>
+            </div>
+
+            <h5 id="title">Sem conexão com a internet</h5>
+            <p class="subtitle" id="subtitle">Verifique sua conexão de rede e tente novamente.</p>
+            <button class="btn" onclick="retry()">Tentar novamente</button>
+
+            <div class="divider"></div>
+            <p class="caption" id="caption"></p>
+        </div>
+
+        <script>
+            const params = new URLSearchParams(location.search);
+            const reason = params.get("reason");
+
+            const ICONS = {
+                // SignalWifiConnectedNoInternet4 (MUI) — wifi conectado mas sem servidor
+                devserver: `<svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor"><path d="M24 8.98C20.93 5.9 16.69 4 12 4S3.07 5.9 0 8.98L12 21v-9h8.99zM19.59 14l-2.09 2.09L15.41 14 14 15.41l2.09 2.09L14 19.59 15.41 21l2.09-2.08L19.59 21 21 19.59l-2.08-2.09L21 15.41z"/></svg>`,
+                // WifiOff (MUI) — sem conexão de rede
+                offline: `<svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor"><path d="M22.99 9C19.15 5.16 13.8 3.76 8.84 4.78l2.52 2.52c3.47-.17 6.99 1.05 9.63 3.7zm-4 4c-1.29-1.29-2.84-2.13-4.49-2.56l3.53 3.53zM2 3.05 5.07 6.1C3.6 6.82 2.22 7.78 1 9l1.99 2c1.24-1.24 2.67-2.16 4.2-2.77l2.24 2.24C7.81 10.89 6.27 11.73 5 13v.01L6.99 15c1.36-1.36 3.14-2.04 4.92-2.06L18.98 20l1.27-1.26L3.29 1.79zM9 17l3 3 3-3c-1.65-1.66-4.34-1.66-6 0"/></svg>`,
+            };
+
+            if (reason === "devserver") {
+                document.getElementById("icon-wrap").innerHTML = ICONS.devserver;
+                document.getElementById("title").textContent =
+                    "Servidor de desenvolvimento offline";
+                document.getElementById("subtitle").textContent =
+                    "O servidor Vite não está respondendo em localhost:3000. Execute npm run dev no projeto client.";
+                document.getElementById("caption").textContent = "Modo desenvolvimento";
+            } else {
+                document.getElementById("icon-wrap").innerHTML = ICONS.offline;
+                document.getElementById("title").textContent = "Sem conexão com a rede";
+                document.getElementById("subtitle").textContent =
+                    "Não foi possível conectar. Verifique seu Wi-Fi ou cabo de rede e tente novamente.";
+                document.getElementById("caption").textContent = "Erro de conexão";
+            }
+
+            function retry() {
+                if (window.electronAPI && window.electronAPI.retry) {
+                    window.electronAPI.retry();
+                }
+            }
+        </script>
+    </body>
+</html>

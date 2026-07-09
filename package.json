@@ -1,0 +1,148 @@
+{
+    "name": "realms-desktop",
+    "version": "1.1.0",
+    "description": "Realms WebClient Desktop App",
+    "main": "build/main.js",
+    "private": true,
+    "author": {
+        "name": "Realms",
+        "email": "dev@realms.tv"
+    },
+    "homepage": "https://realms.tv",
+    "build": {
+        "appId": "tv.realms.web",
+        "productName": "Realms",
+        "directories": {
+            "output": "out"
+        },
+        "files": [
+            "build/**/*",
+            "node_modules/ffmpeg-static/**/*"
+        ],
+        "asarUnpack": [
+            "node_modules/ffmpeg-static/**/*"
+        ],
+        "win": {
+            "target": [
+                {
+                    "target": "nsis",
+                    "arch": [
+                        "x64",
+                        "ia32"
+                    ]
+                },
+                {
+                    "target": "portable",
+                    "arch": [
+                        "x64"
+                    ]
+                }
+            ],
+            "icon": "static/icons/icon.ico",
+            "sign": null,
+            "forceCodeSigning": false
+        },
+        "nsis": {
+            "oneClick": false,
+            "allowToChangeInstallationDirectory": true,
+            "createDesktopShortcut": true,
+            "createStartMenuShortcut": true,
+            "installerSidebar": "static/installer-banner-resized.bmp",
+            "uninstallerSidebar": "static/installer-banner-resized.bmp"
+        },
+        "mac": {
+            "target": [
+                {
+                    "target": "dmg",
+                    "arch": [
+                        "x64",
+                        "arm64"
+                    ]
+                },
+                {
+                    "target": "zip",
+                    "arch": [
+                        "x64",
+                        "arm64"
+                    ]
+                }
+            ],
+            "icon": "static/icons/icon.icns"
+        },
+        "linux": {
+            "target": [
+                {
+                    "target": "AppImage",
+                    "arch": [
+                        "x64"
+                    ]
+                },
+                {
+                    "target": "deb",
+                    "arch": [
+                        "x64"
+                    ]
+                }
+            ],
+            "maintainer": "Realms <dev@realms.tv>",
+            "category": "Network",
+            "icon": "static/icons/icon.png",
+            "executableName": "realms"
+        },
+        "deb": {
+            "afterInstall": null,
+            "afterRemove": null,
+            "depends": [
+                "libnotify4",
+                "libxtst6",
+                "libnss3"
+            ]
+        }
+    },
+    "scripts": {
+        "build:local": "cross-env ELECTRON_ENV=local   node scripts/build.mjs",
+        "build:school": "cross-env ELECTRON_ENV=school  node scripts/build.mjs",
+        "build:staging": "cross-env ELECTRON_ENV=staging node scripts/build.mjs",
+        "build:realms": "cross-env ELECTRON_ENV=realms  node scripts/build.mjs",
+        "dev": "npm run build:local   && electron build/main.js",
+        "start:school": "npm run build:school  && electron build/main.js",
+        "start:staging": "npm run build:staging && electron build/main.js",
+        "start:realms": "npm run build:realms  && electron build/main.js",
+        "dist:school": "npm run build:school  && electron-builder --win",
+        "dist:staging": "npm run build:staging && electron-builder --win",
+        "dist:realms": "npm run build:realms  && electron-builder --win",
+        "dist:school:linux": "npm run build:school  && electron-builder --linux",
+        "dist:staging:linux": "npm run build:staging && electron-builder --linux",
+        "dist:realms:linux": "npm run build:realms  && electron-builder --linux",
+        "generate:icons": "node scripts/generate-icons.mjs",
+        "typecheck": "tsc --noEmit",
+        "lint": "eslint src",
+        "format": "prettier --write \"src/**/*.{ts,tsx}\" \"static/**/*.html\""
+    },
+    "optionalDependencies": {
+        "naudiodon": "^2.0.0"
+    },
+    "dependencies": {
+        "ffmpeg-static": "^5.2.0"
+    },
+    "devDependencies": {
+        "@emotion/react": "^11.14.0",
+        "@emotion/styled": "^11.14.1",
+        "@mui/material": "^9.1.1",
+        "@types/node": "^25.9.3",
+        "@types/react": "^19.2.17",
+        "@types/react-dom": "^19.2.3",
+        "cross-env": "^7.0.3",
+        "electron": "^42.6.1",
+        "electron-builder": "^25.0.0",
+        "electron-icon-builder": "^2.0.1",
+        "esbuild": "^0.28.1",
+        "eslint": "^9.39.4",
+        "prettier": "^3.9.4",
+        "react": "^19.2.7",
+        "react-dom": "^19.2.7",
+        "sharp": "^0.35.1",
+        "typescript": "^6.0.3",
+        "typescript-eslint": "^8.63.0"
+    }
+}
