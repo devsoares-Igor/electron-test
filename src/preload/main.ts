@@ -1,16 +1,5 @@
 import { ipcRenderer } from "electron";
-
-// ─── Debug log (forwarded to main process → C:\Users\devso\electron-audio.log) ─
-function dbg(msg: string): void {
-    ipcRenderer.send("debug-log", msg);
-}
-
-// contextIsolation is intentionally disabled for this WebContentsView.
-// The getDisplayMedia override below must run in the same JavaScript context as
-// the renderer so that calls to navigator.mediaDevices.getDisplayMedia() are
-// intercepted before any library in the page can reach the native API.
-// This view loads only controlled, trusted URLs (the Realms web application).
-// See: src/main/window.ts — WebContentsView webPreferences
+import { createDShowStream, DSHOW_DEVICE_PREFIX, scheduleCaptureTeardown, stopCaptureImmediate } from "./dshow-stream";
 
 declare const __ELECTRON_SOURCE_HOST__: string;
 
@@ -21,60 +10,41 @@ window.electronAPI = {
     listSystemAudioDevices: () => ipcRenderer.invoke("list-system-audio-devices"),
 };
 
-// Packaged builds: write the realm hostname to localStorage so the web app can
-// identify the target realm without a query parameter in the URL.
 if (window.location.protocol === "file:" && typeof __ELECTRON_SOURCE_HOST__ !== "undefined") {
     try {
         localStorage.setItem("devRealmHostname", __ELECTRON_SOURCE_HOST__);
-    } catch {
-        // Blocked by browser storage policy — non-fatal.
-    }
+    } catch { /* storage blocked */ }
 }
 
-// Warm-up: faz uma chamada getUserMedia com AEC/AGC desligado logo que o DOM
-// estiver pronto. Isso força o Chromium a usar o pipeline WASAPI raw e incluir
-// dispositivos virtuais (vMix, VB-Cable, etc.) na enumeração de dispositivos.
-// Sem isso, o Chrome filtra esses dispositivos por incompatibilidade com AEC.
 window.addEventListener("DOMContentLoaded", () => {
     navigator.mediaDevices
         .getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } })
-        .then((stream) => stream.getTracks().forEach((t) => t.stop()))
-        .catch(() => { /* não fatal */ });
+        .then(s => s.getTracks().forEach(t => t.stop()))
+        .catch(() => undefined);
 }, { once: true });
 
-// Unlock AudioContext on the first user gesture. Some contexts start in the
-// "suspended" state even with --autoplay-policy=no-user-gesture-required.
-window.addEventListener(
-    "click",
-    function unlockAudio() {
-        const ctx = (window as Window & { _audioContext?: AudioContext })._audioContext;
-        if (ctx?.state === "suspended") {
-            ctx.resume().catch(() => { });
-        }
-        try {
-            const ac = new AudioContext();
-            const buf = ac.createBuffer(1, 1, 22050);
-            const src = ac.createBufferSource();
-            src.buffer = buf;
-            src.connect(ac.destination);
-            src.start(0);
-            ac.close().catch(() => { });
-        } catch {
-            // AudioContext unavailable — non-fatal.
-        }
-        window.removeEventListener("click", unlockAudio);
-    },
-    { once: true },
-);
+window.addEventListener("click", function unlockAudio() {
+    const ctx = (window as Window & { _audioContext?: AudioContext })._audioContext;
+    if (ctx?.state === "suspended") ctx.resume().catch(() => undefined);
+    try {
+        const ac = new AudioContext();
+        const buf = ac.createBuffer(1, 1, 22050);
+        const src = ac.createBufferSource();
+        src.buffer = buf;
+        src.connect(ac.destination);
+        src.start(0);
+        ac.close().catch(() => undefined);
+    } catch { }
+    window.removeEventListener("click", unlockAudio);
+}, { once: true });
 
-// Prevent nosleep.js from using a hidden video element as a Wake Lock fallback.
 const mockWakeLockSentinel = {
     type: "screen" as WakeLockType,
     released: false,
     onrelease: null as null,
     release: (): Promise<void> => Promise.resolve(),
-    addEventListener: (): void => { },
-    removeEventListener: (): void => { },
+    addEventListener: (): void => undefined,
+    removeEventListener: (): void => undefined,
     dispatchEvent: (): boolean => true,
 };
 
@@ -84,198 +54,53 @@ Object.defineProperty(navigator, "wakeLock", {
     configurable: true,
 });
 
-// Capture getUserMedia before any library (e.g. Janus) can replace it.
 const originalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
 
-// ─── DirectShow virtual device bridge ────────────────────────────────────────
-// Injects DirectShow-only devices (vMix, etc.) into enumerateDevices() and
-// creates a synthetic MediaStream via AudioWorklet when those devices are selected.
-
-const DS_PREFIX = "dshow:";
-
-// Cache system devices so PowerShell isn't called on every enumerateDevices()
 type SysDevice = { name: string; direction: string; status: string };
-let _sysCache: SysDevice[] = [];
-let _sysCacheTs = 0;
-async function getSysDevices(): Promise<SysDevice[]> {
-    if (Date.now() - _sysCacheTs < 10_000) return _sysCache;
+let sysDeviceCache: SysDevice[] = [];
+let sysCacheExpiry = 0;
+
+async function getSystemDevices(): Promise<SysDevice[]> {
+    if (Date.now() < sysCacheExpiry) return sysDeviceCache;
     try {
-        _sysCache = (await ipcRenderer.invoke("list-system-audio-devices")) as SysDevice[];
-        _sysCacheTs = Date.now();
+        sysDeviceCache = await ipcRenderer.invoke("list-system-audio-devices") as SysDevice[];
+        sysCacheExpiry = Date.now() + 10_000;
     } catch { /* non-fatal */ }
-    return _sysCache;
+    return sysDeviceCache;
 }
 
-// Prefetch on page load (warm cache before the web app calls enumerateDevices)
-getSysDevices().catch(() => { /* ignore */ });
+getSystemDevices().catch(() => undefined); // pre-warm cache
 
-// Override enumerateDevices to inject DirectShow-only input devices
-const _origEnumDevices = navigator.mediaDevices.enumerateDevices.bind(navigator.mediaDevices);
+const originalEnumerateDevices = navigator.mediaDevices.enumerateDevices.bind(navigator.mediaDevices);
 Object.defineProperty(navigator.mediaDevices, "enumerateDevices", {
     value: async (): Promise<MediaDeviceInfo[]> => {
-        const [native, sys] = await Promise.all([_origEnumDevices(), getSysDevices()]);
-        const nativeLabels = new Set(native.map(d => d.label.toLowerCase().trim()).filter(Boolean));
-        const synth = sys
-            .filter(d => d.name && d.direction !== "output" && !nativeLabels.has(d.name.toLowerCase().trim()))
+        const [native, sys] = await Promise.all([originalEnumerateDevices(), getSystemDevices()]);
+        const nativeLabels = native.map(d => d.label.toLowerCase().trim()).filter(Boolean);
+
+        // Use fuzzy match: exclude DirectShow devices whose name is contained in
+        // (or contains) any native Chrome label. This handles cases where Chrome
+        // appends USB IDs to labels, e.g. "Microfone (HD Pro Webcam C920) (046d:082d)".
+        const isAlreadyNative = (name: string): boolean => {
+            const n = name.toLowerCase().trim();
+            return nativeLabels.some(nl => nl.includes(n) || n.includes(nl));
+        };
+
+        const virtual = sys
+            .filter(d => d.name && d.direction !== "output" && !isAlreadyNative(d.name))
             .map(d => ({
-                deviceId: `${DS_PREFIX}${encodeURIComponent(d.name)}`,
+                deviceId: `${DSHOW_DEVICE_PREFIX}${encodeURIComponent(d.name)}`,
                 groupId: "dshow-virtual",
                 kind: "audioinput" as MediaDeviceKind,
                 label: d.name,
                 toJSON: () => ({}),
             } as MediaDeviceInfo));
-        return [...native, ...synth];
+
+        console.log(`[enum] native=${native.filter(d => d.kind === "audioinput").length} virtual=${virtual.length}`, virtual.map(d => d.label));
+        return [...native, ...virtual];
     },
     writable: true, configurable: true,
 });
 
-// AudioContext persistente + GainNode como mix bus.
-// Todas as AudioBufferSourceNodes conectam ao mixBus.
-// Cada getUserMedia cria um novo MediaStreamDestinationNode conectado ao mixBus.
-// Assim, múltiplas chamadas getUserMedia para o MESMO device não reiniciam o FFmpeg —
-// apenas adicionam mais um destino ao mesmo pipeline.
-let _captureCtx: AudioContext | null = null;
-let _mixBus: GainNode | null = null;
-let _captureChunkListener: ((e: Electron.IpcRendererEvent, buf: Buffer) => void) | null = null;
-let _currentDevice: string | null = null;
-let _activeDestCount = 0;
-let _nextStart = 0;
-let _audioReady: Promise<void> | null = null;
-let _keepAliveTimer: ReturnType<typeof setTimeout> | null = null;
-// Timer de switch: para o FFmpeg quando usuário troca de vMix para outro device
-let _switchTimer: ReturnType<typeof setTimeout> | null = null;
-
-function stopVMixCapture(): void {
-    dbg(`stopVMixCapture: stopping FFmpeg (device=${_currentDevice})`);
-    if (_keepAliveTimer) { clearTimeout(_keepAliveTimer); _keepAliveTimer = null; }
-    if (_switchTimer) { clearTimeout(_switchTimer); _switchTimer = null; }
-    if (_captureChunkListener) {
-        ipcRenderer.removeListener("dshow-chunk", _captureChunkListener);
-        _captureChunkListener = null;
-    }
-    ipcRenderer.invoke("dshow-stop").catch(() => { /* ignore */ });
-    _currentDevice = null; _audioReady = null; _activeDestCount = 0;
-}
-
-function getOrCreateCaptureCtx(): { ctx: AudioContext; mix: GainNode } {
-    if (!_captureCtx || _captureCtx.state === "closed") {
-        _captureCtx = new AudioContext({ sampleRate: 48000 });
-        _mixBus = _captureCtx.createGain();
-        _mixBus.gain.value = 1;
-        _nextStart = 0;
-    }
-    return { ctx: _captureCtx, mix: _mixBus! };
-}
-
-async function createDShowStream(deviceName: string): Promise<MediaStream> {
-    // Cancela qualquer stop pendente (keep-alive ou switch)
-    if (_keepAliveTimer) { clearTimeout(_keepAliveTimer); _keepAliveTimer = null; }
-    if (_switchTimer) { clearTimeout(_switchTimer); _switchTimer = null; }
-
-    const { ctx, mix } = getOrCreateCaptureCtx();
-    if (ctx.state !== "running") await ctx.resume();
-
-    // Se o mesmo device já está sendo capturado (ou iniciando), aguarda o áudio
-    // confirmar ANTES de retornar o stream — evita que o Janus receba stream silencioso.
-    if (_currentDevice === deviceName && _captureChunkListener) {
-        if (_audioReady) await _audioReady;
-
-        const destination = ctx.createMediaStreamDestination();
-        mix.connect(destination);
-        _activeDestCount++;
-        destination.stream.getAudioTracks().forEach(t => t.addEventListener("ended", () => onDestEnded(destination, mix)));
-        return destination.stream;
-    }
-
-    // Device diferente ou FFmpeg não está rodando — reiniciar captura
-    if (_captureChunkListener) {
-        ipcRenderer.removeListener("dshow-chunk", _captureChunkListener);
-        _captureChunkListener = null;
-        await ipcRenderer.invoke("dshow-stop").catch(() => { /* ignore */ });
-        await new Promise<void>(r => setTimeout(r, 350));
-    }
-
-    _currentDevice = deviceName;
-    _nextStart = 0;
-
-    // Promise que resolve no primeiro chunk de áudio
-    let resolveAudioReady!: () => void;
-    _audioReady = new Promise<void>(r => { resolveAudioReady = r; });
-
-    const AHEAD = 0.12;
-    let firstChunk = true;
-
-    const onChunk = (_e: Electron.IpcRendererEvent, buf: Buffer) => {
-        if (ctx.state === "closed") return;
-        // Notifica todos os callers que esperavam pelo áudio
-        if (firstChunk) { firstChunk = false; resolveAudioReady(); }
-        const float32 = new Float32Array(
-            buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer,
-        );
-        const audioBuffer = ctx.createBuffer(1, float32.length, 48000);
-        audioBuffer.copyToChannel(float32, 0);
-        const source = ctx.createBufferSource();
-        source.buffer = audioBuffer;
-        source.connect(mix);
-        if (_nextStart < ctx.currentTime) { _nextStart = ctx.currentTime + AHEAD; }
-        source.start(_nextStart);
-        _nextStart += audioBuffer.duration;
-    };
-
-    _captureChunkListener = onChunk;
-    ipcRenderer.on("dshow-chunk", onChunk);
-
-    const started = await ipcRenderer.invoke("dshow-start", deviceName) as boolean;
-    dbg(`createDShowStream: dshow-start returned started=${started} for "${deviceName}"`);
-    if (!started) {
-        ipcRenderer.removeListener("dshow-chunk", onChunk);
-        _captureChunkListener = null; _currentDevice = null; _audioReady = null;
-        throw new DOMException(`Não foi possível abrir "${deviceName}". Verifique se o dispositivo está ativo.`, "NotReadableError");
-    }
-
-    dbg(`createDShowStream: device open OK, resolving audioReady for "${deviceName}"`);
-    // Device is confirmed open — resolve so concurrent callers can proceed.
-    // Silence is valid (e.g., vMix Bus A with no content yet); audio flows when
-    // content plays. Do NOT block on chunks here — that caused fallback to wrong device.
-    resolveAudioReady();
-
-    const onFfmpegEnd = () => {
-        if (_captureChunkListener === onChunk) {
-            ipcRenderer.removeListener("dshow-chunk", onChunk);
-            _captureChunkListener = null; _currentDevice = null; _audioReady = null;
-        }
-    };
-    ipcRenderer.once("dshow-ended", onFfmpegEnd);
-    ipcRenderer.once("dshow-error", onFfmpegEnd);
-
-    // Cria a primeira destination para este caller
-    const destination = ctx.createMediaStreamDestination();
-    mix.connect(destination);
-    _activeDestCount++;
-    destination.stream.getAudioTracks().forEach(t => t.addEventListener("ended", () => onDestEnded(destination, mix)));
-
-    return destination.stream;
-}
-
-function onDestEnded(destination: MediaStreamAudioDestinationNode, mix: GainNode): void {
-    mix.disconnect(destination);
-    _activeDestCount--;
-    if (_activeDestCount <= 0) {
-        _activeDestCount = 0;
-        // Keep-alive: mantém FFmpeg vivo por 5s para absorver o gap preview → join
-        if (_keepAliveTimer) clearTimeout(_keepAliveTimer);
-        _keepAliveTimer = setTimeout(() => {
-            if (_captureChunkListener) {
-                ipcRenderer.removeListener("dshow-chunk", _captureChunkListener);
-                _captureChunkListener = null;
-            }
-            ipcRenderer.invoke("dshow-stop").catch(() => { /* ignore */ });
-            _currentDevice = null; _audioReady = null; _keepAliveTimer = null;
-        }, 5_000);
-    }
-}
-
-// Helper: extrai o deviceId independente do formato (string | {exact} | {ideal} | array)
 function extractDeviceId(raw: MediaTrackConstraints["deviceId"]): string {
     if (typeof raw === "string") return raw;
     if (Array.isArray(raw)) return String(raw[0] ?? "");
@@ -288,26 +113,56 @@ function extractDeviceId(raw: MediaTrackConstraints["deviceId"]): string {
     return "";
 }
 
-// Override getUserMedia to intercept DirectShow device requests
 Object.defineProperty(navigator.mediaDevices, "getUserMedia", {
     value: async (constraints?: MediaStreamConstraints): Promise<MediaStream> => {
         const audio = constraints?.audio;
+        const video = constraints?.video;
+
+        const audioId = audio && typeof audio === "object"
+            ? extractDeviceId((audio as MediaTrackConstraints).deviceId)
+            : (audio === true ? "[any]" : "[none]");
+        const videoId = video && typeof video === "object"
+            ? extractDeviceId((video as MediaTrackConstraints).deviceId)
+            : (video === true ? "[any]" : "[none]");
+
+        console.log(`[gUM] audio="${audioId}" video="${videoId}"`);
 
         if (audio && typeof audio === "object") {
             const deviceId = extractDeviceId((audio as MediaTrackConstraints).deviceId);
 
-            if (deviceId.startsWith(DS_PREFIX)) {
-                // Cancela qualquer switch timer — usuário voltou para vMix
-                if (_switchTimer) { clearTimeout(_switchTimer); _switchTimer = null; }
+            if (deviceId.startsWith(DSHOW_DEVICE_PREFIX)) {
+                const deviceName = decodeURIComponent(deviceId.slice(DSHOW_DEVICE_PREFIX.length));
 
-                const name = decodeURIComponent(deviceId.slice(DS_PREFIX.length));
-                dbg(`getUserMedia: DS device requested="${name}"`);
-                const audioStream = await createDShowStream(name);
-                dbg(`getUserMedia: DS stream created ok for "${name}"`);
+                // Before using FFmpeg, check if Chrome can access this device natively.
+                // Some devices appear in the DirectShow registry with a different name than
+                // their Chrome/WASAPI label (e.g. Windows in Portuguese vs Chrome in English).
+                // If a fuzzy name match exists in the native list, prefer Chrome's native path.
+                const nativeDevices = await originalEnumerateDevices();
+                const n = deviceName.toLowerCase();
+                const nativeMatch = nativeDevices.find(d =>
+                    d.kind === "audioinput" && d.label &&
+                    (d.label.toLowerCase().includes(n) || n.includes(d.label.toLowerCase())),
+                );
+
+                if (nativeMatch) {
+                    console.log(`[gUM] dshow "${deviceName}" → native fallback "${nativeMatch.label}"`);
+                    const audioStream = await originalGetUserMedia({ audio: { deviceId: { exact: nativeMatch.deviceId } } });
+                    if (constraints?.video) {
+                        try {
+                            const videoStream = await originalGetUserMedia({ video: constraints.video });
+                            return new MediaStream([...audioStream.getAudioTracks(), ...videoStream.getVideoTracks()]);
+                        } catch { return audioStream; }
+                    }
+                    return audioStream;
+                }
+
+                console.log(`[gUM] → dshow capture: "${deviceName}"`);
+                const audioStream = await createDShowStream(deviceName);
 
                 if (constraints?.video) {
                     try {
                         const videoStream = await originalGetUserMedia({ video: constraints.video });
+                        console.log(`[gUM] → combined dshow audio + video`);
                         return new MediaStream([
                             ...audioStream.getAudioTracks(),
                             ...videoStream.getVideoTracks(),
@@ -320,16 +175,32 @@ Object.defineProperty(navigator.mediaDevices, "getUserMedia", {
                 return audioStream;
             }
 
-            // Device não-vMix com deviceId explícito: agenda parada do FFmpeg
-            // (usuário trocou para microfone normal)
-            if (deviceId && _captureChunkListener) {
-                dbg(`getUserMedia: non-DS device selected (id=${deviceId.slice(0,30)}), scheduling stopVMixCapture in 2s`);
-                if (_switchTimer) clearTimeout(_switchTimer);
-                _switchTimer = setTimeout(stopVMixCapture, 2_000);
+            // Only schedule teardown when an explicit non-dshow deviceId was requested.
+            // Generic audio:true or audio without deviceId are permission/enum requests
+            // (e.g. the irmwebclient3 Devices component calls getUserMedia({audio:true,video:true})
+            // just to enumerate devices) and should NOT stop the vMix capture.
+            const hasExplicitDeviceId = !!(audio as MediaTrackConstraints).deviceId;
+            if (hasExplicitDeviceId) {
+                console.log(`[gUM] \u2192 non-dshow audio with explicit deviceId, scheduling vMix teardown`);
+                scheduleCaptureTeardown();
+            } else {
+                console.log(`[gUM] \u2192 non-dshow audio (no deviceId = permission/enum request, skipping teardown)`);
             }
         }
 
-        return originalGetUserMedia(constraints);
+        const stream = await originalGetUserMedia(constraints);
+        const tracks = stream.getTracks().map(t => `${t.kind}:${t.label}`).join(", ");
+        console.log(`[gUM] → native stream tracks: [${tracks}]`);
+
+        // Only stop vMix when the request had an explicit deviceId (genuine device switch).
+        // Generic requests like audio:true or audio without deviceId are permission/enum
+        // calls and should not interrupt the vMix capture.
+        const audioConstraint = constraints?.audio;
+        const hadExplicitDeviceId = audioConstraint && typeof audioConstraint === "object"
+            && !!(audioConstraint as MediaTrackConstraints).deviceId;
+        if (hadExplicitDeviceId && stream.getAudioTracks().length > 0) stopCaptureImmediate();
+
+        return stream;
     },
     writable: true, configurable: true,
 });

@@ -19,7 +19,7 @@ WIN_DIR_WSL="/mnt/c/Users/$WIN_USER/Realms-electron-app"
 WIN_DIR="C:\\Users\\$WIN_USER\\Realms-electron-app"
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  Realms Electron — Setup"
+echo "           Realms Electron — Setup"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # ── 1. Instalar dependências no WSL ───────────────────────────

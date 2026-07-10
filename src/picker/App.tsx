@@ -1,16 +1,16 @@
 import {
+    Tab,
     Box,
+    Tabs,
+    Paper,
     Button,
-    CircularProgress,
+    Switch,
+    Typography,
     createTheme,
     CssBaseline,
-    FormControlLabel,
-    Paper,
-    Switch,
-    Tab,
-    Tabs,
     ThemeProvider,
-    Typography,
+    FormControlLabel,
+    CircularProgress,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 

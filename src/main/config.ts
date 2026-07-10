@@ -1,7 +1,3 @@
-/**
- * Environment configuration — baked at build time via esbuild define.
- * Each env maps to its own URL and behavior.
- */
 
 declare const __ELECTRON_ENV__: string;
 declare const __APP_URL__: string;
@@ -12,8 +8,8 @@ export type ElectronEnv = "local" | "school" | "staging" | "realms";
 
 const ENV_MAP: Record<ElectronEnv, { appUrl: string; isLocal: boolean }> = {
     local: { appUrl: "http://localhost:3000/?source=schoolwebv2.ip.tv", isLocal: true },
-    school: { appUrl: "https://schoolwebv2.ip.tv/", isLocal: false },
     staging: { appUrl: "https://stagingwebv2.ip.tv/", isLocal: false },
+    school: { appUrl: "https://schoolwebv2.ip.tv/", isLocal: false },
     realms: { appUrl: "https://realmswebv2.ip.tv/", isLocal: false },
 };
 

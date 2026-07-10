@@ -33,15 +33,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "
     node node_modules\\electron\\install.js
   }
 
-  # 0b. Garante o binário do FFmpeg (necessário para captura de áudio)
-  Write-Host '→ Verificando FFmpeg...'
-  \$ffmpegExe = node -e "try{console.log(require('ffmpeg-static'))}catch{console.log('')}" 2>\$null
-  if (-not \$ffmpegExe -or -not (Test-Path \$ffmpegExe)) {
-    Write-Host '  FFmpeg não encontrado, baixando...'
-    node node_modules\\ffmpeg-static\\install.js
-    Write-Host '  ✓ FFmpeg baixado'
-  } else {
-    Write-Host "  ✓ FFmpeg OK: \$ffmpegExe"
+  # 0b. Garante ffmpeg-static (binário Windows para captura DirectShow)
+  if (-not (Test-Path 'node_modules\\ffmpeg-static')) {
+    Write-Host '→ Instalando ffmpeg-static...'
+    npm install ffmpeg-static --no-save 2>&1
   }
 
   # 0c. Garante cross-env (necessário para npm run dist:school no Windows)

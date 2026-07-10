@@ -1,6 +1,6 @@
-import { BrowserWindow, desktopCapturer, ipcMain, IpcMainEvent } from "electron";
 import path from "path";
 import type { PickerResult, SourceData } from "../../shared/types/ipc";
+import { BrowserWindow, desktopCapturer, ipcMain, IpcMainEvent } from "electron";
 
 export function registerScreenCaptureHandlers(): void {
     ipcMain.handle("show-source-picker", (): Promise<PickerResult | null> => {

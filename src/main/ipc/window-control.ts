@@ -1,7 +1,8 @@
-import { BrowserWindow, ipcMain, WebContentsView } from "electron";
 import path from "path";
-import { DEVTOOLS_PASSWORD } from "../config";
 import { reloadApp } from "../window";
+import { resolveLocale } from "../i18n";
+import { DEVTOOLS_PASSWORD } from "../config";
+import { BrowserWindow, ipcMain, WebContentsView } from "electron";
 
 export function registerWindowControlHandlers(win: BrowserWindow, view: WebContentsView): void {
     ipcMain.removeAllListeners("retry-load");
@@ -37,6 +38,6 @@ export function registerWindowControlHandlers(win: BrowserWindow, view: WebConte
             },
         });
         dialog.setMenu(null);
-        dialog.loadFile(path.join(__dirname, "devtools-dialog.html"));
+        dialog.loadFile(path.join(__dirname, "devtools-dialog.html"), { query: { locale: resolveLocale() } });
     });
 }

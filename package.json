@@ -45,8 +45,8 @@
             "allowToChangeInstallationDirectory": true,
             "createDesktopShortcut": true,
             "createStartMenuShortcut": true,
-            "installerSidebar": "static/installer-banner-resized.bmp",
-            "uninstallerSidebar": "static/installer-banner-resized.bmp"
+            "installerSidebar": "assets/installer-banner-resized.bmp",
+            "uninstallerSidebar": "assets/installer-banner-resized.bmp"
         },
         "mac": {
             "target": [
@@ -116,9 +116,6 @@
         "typecheck": "tsc --noEmit",
         "lint": "eslint src",
         "format": "prettier --write \"src/**/*.{ts,tsx}\" \"static/**/*.html\""
-    },
-    "optionalDependencies": {
-        "naudiodon": "^2.0.0"
     },
     "dependencies": {
         "ffmpeg-static": "^5.2.0"

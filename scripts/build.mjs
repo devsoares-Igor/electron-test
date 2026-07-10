@@ -1,6 +1,6 @@
+import { join } from "path";
 import { build } from "esbuild";
 import { copyFileSync, existsSync, mkdirSync, readdirSync } from "fs";
-import { join } from "path";
 
 const ENVS = {
     local: { appUrl: "http://localhost:3000/?source=schoolwebv2.ip.tv", isLocal: true },
@@ -11,7 +11,7 @@ const ENVS = {
 
 const electronEnv = process.env.ELECTRON_ENV || "local";
 if (!ENVS[electronEnv]) {
-    console.error(`ELECTRON_ENV inválido: "${electronEnv}". Use: ${Object.keys(ENVS).join(" | ")}`);
+    console.error(`Invalid ELECTRON_ENV: "${electronEnv}". Valid values: ${Object.keys(ENVS).join(" | ")}`);
     process.exit(1);
 }
 
@@ -39,6 +39,7 @@ await Promise.all([
         platform: "node",
         target: "node20",
         external: ["electron", "ffmpeg-static"],
+        sourcemap: true,
         define: { ...envDefine, "__DEVTOOLS_PASSWORD__": JSON.stringify(devtoolsPassword) },
     }),
 
@@ -65,7 +66,7 @@ await Promise.all([
 
     // Picker preload (contextIsolation: true, uses contextBridge)
     build({
-        entryPoints: ["src/picker/preload.ts"],
+        entryPoints: ["src/preload/picker.ts"],
         bundle: true,
         outfile: "build/picker-preload.js",
         platform: "node",

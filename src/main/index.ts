@@ -1,8 +1,9 @@
+import { createWindow } from "./window";
+import { registerIpcHandlers } from "./ipc";
+import { FfmpegManager } from "./media/ffmpeg";
+import { requestMediaPermissions } from "./permissions";
 import { app, BrowserWindow, Menu, net } from "electron";
 import { APP_URL, CURRENT_ENV, IS_LOCAL } from "./config";
-import { registerIpcHandlers } from "./ipc";
-import { requestMediaPermissions } from "./permissions";
-import { createWindow } from "./window";
 
 Menu.setApplicationMenu(null);
 
@@ -10,7 +11,6 @@ if (process.platform === "win32") {
     app.setAppUserModelId("com.realms.iptv");
 }
 
-// ─── Chromium flags ───────────────────────────────────────────────────────────
 
 app.commandLine.appendSwitch(
     "enable-features",
@@ -45,6 +45,7 @@ function prewarmLocal(): void {
 
 app.whenReady().then(async () => {
     await requestMediaPermissions();
+    await FfmpegManager.initialize(); // resolves silently even if FFmpeg is missing
 
     prewarmLocal();
 

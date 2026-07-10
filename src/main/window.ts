@@ -1,8 +1,7 @@
-import { BrowserWindow, shell, WebContentsView } from "electron";
 import path from "path";
+import { resolveLocale } from "./i18n";
 import { APP_HOST, APP_URL, IS_LOCAL } from "./config";
-
-// ─── Constants ───────────────────────────────────────────────────────────────
+import { BrowserWindow, shell, WebContentsView } from "electron";
 
 const TB_HEIGHT = 32;
 
@@ -16,8 +15,6 @@ const ALLOWED_PERMISSIONS = [
     "display-capture",
     "screen-wake-lock",
 ];
-
-// ─── Permissions ─────────────────────────────────────────────────────────────
 
 function applyPermissions(win: BrowserWindow): void {
     const { session } = win.webContents;
@@ -42,8 +39,6 @@ function applyPermissions(win: BrowserWindow): void {
     );
 }
 
-// ─── Window factory ──────────────────────────────────────────────────────────
-
 export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
     const iconFile =
         process.platform === "win32"
@@ -53,7 +48,8 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
                 : "icon.png";
     const iconPath = path.join(__dirname, "icons", iconFile);
 
-    // Splash screen
+    const locale = resolveLocale();
+
     const splash = new BrowserWindow({
         width: 360,
         height: 280,
@@ -64,7 +60,7 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
         skipTaskbar: true,
         webPreferences: { nodeIntegration: false, contextIsolation: true },
     });
-    splash.loadFile(path.join(__dirname, "splash.html"));
+    splash.loadFile(path.join(__dirname, "splash.html"), { query: { locale } });
     splash.setMenu(null);
 
     // Main window — hidden titlebar + native overlay (Discord/VS Code style)
@@ -85,7 +81,7 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
         },
     });
     win.setMenu(null);
-    win.loadFile(path.join(__dirname, "titlebar.html"));
+    win.loadFile(path.join(__dirname, "titlebar.html"), { query: { locale } });
 
     // WebContentsView — app content below the titlebar
     const view = new WebContentsView({
@@ -135,7 +131,7 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
             : IS_LOCAL
                 ? "devserver"
                 : "offline";
-        view.webContents.loadFile(path.join(__dirname, "offline.html"), { query: { reason } });
+        view.webContents.loadFile(path.join(__dirname, "offline.html"), { query: { reason, locale } });
     });
 
     // Child windows (chat detach, etc.)
@@ -161,8 +157,8 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
             };
         }
 
-        // Google OAuth popup — deve abrir dentro do Electron para que o
-        // postMessage do GSI funcione entre o popup e a janela pai.
+        // Google OAuth popup — must open inside Electron so the GSI postMessage
+        // between the popup and the parent window works correctly.
         const isGoogleOAuth =
             url.startsWith("https://accounts.google.com/") ||
             url.startsWith("https://oauth2.googleapis.com/");
@@ -199,8 +195,8 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
     view.webContents.on("did-create-window", (child, details) => {
         child.setMenu(null);
 
-        // Se for popup do Google OAuth, sobrescreve o User-Agent para evitar
-        // o erro "disallowed_useragent" que o Google lança ao detectar Electron.
+        // Override the User-Agent on Google OAuth popups to avoid the
+        // "disallowed_useragent" error that Google throws when detecting Electron.
         const url = details.url ?? "";
         const isGoogleOAuth =
             url.startsWith("https://accounts.google.com/") ||
@@ -213,13 +209,12 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
                 "Chrome/126.0.0.0 Safari/537.36";
             child.webContents.setUserAgent(chromeUA);
 
-            // Redireciona navegações internas do popup (Google troca URLs durante o flow)
+            // Block navigations that leave Google's OAuth domain during the flow.
             child.webContents.on("will-navigate", (_e, navUrl) => {
                 if (
                     navUrl.startsWith("https://accounts.google.com/") ||
                     navUrl.startsWith("https://oauth2.googleapis.com/")
                 ) return;
-                // qualquer outra URL no popup (ex: redirect de volta) não precisa navegar
                 _e.preventDefault();
             });
         }

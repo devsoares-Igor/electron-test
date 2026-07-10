@@ -15,8 +15,6 @@ declare global {
                 name: string;
                 status: "OK" | "disconnected" | "unknown";
                 direction: "input" | "output" | "unknown";
-                nativeId?: number;
-                hostApi?: string;
             }>>;
         };
         pickerAPI: {
@@ -25,6 +23,8 @@ declare global {
         };
         titlebarAPI: {
             reload(): void;
+            openDevtools(password: string): Promise<boolean>;
+            showDevtoolsDialog(): void;
         };
     }
 }

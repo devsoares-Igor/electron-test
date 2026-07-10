@@ -1,6 +1,7 @@
 import type { BrowserWindow, WebContentsView } from "electron";
-import { registerAudioCaptureHandlers } from "./audio-capture";
+
 import { registerAudioDeviceHandlers } from "./audio-devices";
+import { registerAudioCaptureHandlers } from "./audio-capture";
 import { registerScreenCaptureHandlers } from "./screen-capture";
 import { registerWindowControlHandlers } from "./window-control";
 
