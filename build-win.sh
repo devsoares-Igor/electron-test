@@ -26,8 +26,10 @@ ELECTRON_ENV=$ENV node scripts/build.mjs
 echo "→ [2/4] Preparando pasta Windows ($WIN_DIR)..."
 mkdir -p "$WIN_DIR/build"
 mkdir -p "$WIN_DIR/static"
+mkdir -p "$WIN_DIR/assets"
 rsync -a --delete build/  "$WIN_DIR/build/"
 rsync -a --delete static/ "$WIN_DIR/static/"
+rsync -a --delete assets/ "$WIN_DIR/assets/"
 cp package.json           "$WIN_DIR/package.json"
 
 echo "→ [3/4] Instalando dependências no Windows (se necessário)..."
@@ -49,11 +51,8 @@ echo "→ [4/4] Gerando installer com electron-builder (saída: out/$ENV)..."
 powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "
   Set-Location '$WIN_DIR_WIN'
 
-  # Limpa build anterior deste ambiente para evitar 'Can't open output file'
-  if (Test-Path 'out\\$ENV') {
-    Write-Host '  Limpando out/$ENV anterior...'
-    Remove-Item -Recurse -Force 'out\\$ENV' -ErrorAction SilentlyContinue
-  }
+  # Cria pasta de saída do ambiente se ainda não existir
+  New-Item -ItemType Directory -Force -Path "out\$ENV" | Out-Null
 
   \$env:CSC_IDENTITY_AUTO_DISCOVERY = 'false'
   \$env:PATH = 'C:\Program Files\nodejs;' + [System.Environment]::GetEnvironmentVariable('PATH','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('PATH','User')
