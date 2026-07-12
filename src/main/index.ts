@@ -1,9 +1,11 @@
+import path from "path";
+import { pathToFileURL } from "url";
 import { createWindow } from "./window";
 import { registerIpcHandlers } from "./ipc";
 import { FfmpegManager } from "./media/ffmpeg";
 import { requestMediaPermissions } from "./permissions";
-import { app, BrowserWindow, Menu, net } from "electron";
 import { APP_URL, CURRENT_ENV, IS_LOCAL } from "./config";
+import { app, BrowserWindow, Menu, net, protocol } from "electron";
 
 Menu.setApplicationMenu(null);
 
@@ -11,13 +13,17 @@ if (process.platform === "win32") {
     app.setAppUserModelId("com.realms.iptv");
 }
 
+protocol.registerSchemesAsPrivileged([{
+    scheme: "realms",
+    privileges: { standard: true, secure: true, supportFetchAPI: true },
+}]);
+
 
 app.commandLine.appendSwitch(
     "enable-features",
     "WebWakeLock,WebRTC-H264WithOpenH264FFmpeg,WebRTCPipeWireCapturer," +
     "ScreenCaptureKitMac,WindowsGraphicsCapture,AudioOutputDeviceSelection",
 );
-app.commandLine.appendSwitch("enable-blink-features", "WakeLock");
 app.commandLine.appendSwitch("autoplay-policy", "no-user-gesture-required");
 app.commandLine.appendSwitch("enable-usermedia-screen-capturing");
 
@@ -38,14 +44,24 @@ function prewarmLocal(): void {
         });
         req.on("error", () => { });
         req.end();
-    } catch {
-        // Non-fatal — dev server may not be ready yet.
-    }
+    } catch { }
 }
 
 app.whenReady().then(async () => {
+    const appDir = path.resolve(__dirname, "..");
+    protocol.handle("realms", (request) => {
+        const { pathname } = new URL(request.url);
+        const safe = path.normalize(decodeURIComponent(pathname.slice(1)));
+        const filePath = path.resolve(appDir, safe);
+        const relative = path.relative(appDir, filePath);
+        if (!safe || relative.startsWith("..") || path.isAbsolute(relative)) {
+            return new Response("Forbidden", { status: 403 });
+        }
+        return net.fetch(pathToFileURL(filePath).toString());
+    });
+
     await requestMediaPermissions();
-    await FfmpegManager.initialize(); // resolves silently even if FFmpeg is missing
+    await FfmpegManager.initialize();
 
     prewarmLocal();
 

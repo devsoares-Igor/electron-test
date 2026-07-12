@@ -1,9 +1,10 @@
 import type { PickerResult, SourceData } from "./ipc";
 
-// Each API is only available in its respective Electron window context:
-//   electronAPI — main window (WebContentsView preload)
-//   pickerAPI   — screen picker window (picker preload)
-//   titlebarAPI — titlebar overlay (titlebar preload)
+declare module "react" {
+    interface CSSProperties {
+        WebkitAppRegion?: "drag" | "no-drag";
+    }
+}
 
 declare global {
     interface Window {
@@ -18,13 +19,16 @@ declare global {
             }>>;
         };
         pickerAPI: {
-            onSourcesReady(callback: (sources: SourceData[]) => void): void;
+            getSources(): Promise<SourceData[]>;
             sendResult(result: PickerResult | null): void;
         };
         titlebarAPI: {
             reload(): void;
             openDevtools(password: string): Promise<boolean>;
             showDevtoolsDialog(): void;
+            getZoom(): Promise<number>;
+            setZoom(percent: number): void;
+            showMenu(): void;
         };
     }
 }

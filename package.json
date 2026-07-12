@@ -1,8 +1,8 @@
 {
     "name": "realms-desktop",
-    "version": "1.2.0",
+    "version": "1.0.0",
     "description": "Realms WebClient Desktop App",
-    "main": "build/main.js",
+    "main": "out/main/index.js",
     "private": true,
     "author": {
         "name": "Realms",
@@ -12,27 +12,28 @@
     "build": {
         "appId": "tv.realms.web",
         "productName": "Realms",
+        "afterPack": "./scripts/after-pack.mjs",
+        "compression": "normal",
         "directories": {
             "output": "out"
         },
         "files": [
-            "build/**/*",
-            "node_modules/ffmpeg-static/**/*"
+            "out/main/**/*",
+            "out/preload/**/*",
+            "out/renderer/**/*",
+            "!out/**/*.map",
+            "static/**/*",
+            "node_modules/ffmpeg-static/ffmpeg.exe",
+            "node_modules/ffmpeg-static/index.js",
+            "node_modules/ffmpeg-static/package.json"
         ],
         "asarUnpack": [
-            "node_modules/ffmpeg-static/**/*"
+            "node_modules/ffmpeg-static/ffmpeg.exe"
         ],
         "win": {
             "target": [
                 {
                     "target": "nsis",
-                    "arch": [
-                        "x64",
-                        "ia32"
-                    ]
-                },
-                {
-                    "target": "portable",
                     "arch": [
                         "x64"
                     ]
@@ -98,14 +99,14 @@
         }
     },
     "scripts": {
-        "build:local": "cross-env ELECTRON_ENV=local   node scripts/build.mjs",
-        "build:school": "cross-env ELECTRON_ENV=school  node scripts/build.mjs",
-        "build:staging": "cross-env ELECTRON_ENV=staging node scripts/build.mjs",
-        "build:realms": "cross-env ELECTRON_ENV=realms  node scripts/build.mjs",
-        "dev": "npm run build:local   && electron build/main.js",
-        "start:school": "npm run build:school  && electron build/main.js",
-        "start:staging": "npm run build:staging && electron build/main.js",
-        "start:realms": "npm run build:realms  && electron build/main.js",
+        "build:local": "cross-env ELECTRON_ENV=local   electron-vite build",
+        "build:school": "cross-env ELECTRON_ENV=school  electron-vite build",
+        "build:staging": "cross-env ELECTRON_ENV=staging electron-vite build",
+        "build:realms": "cross-env ELECTRON_ENV=realms  electron-vite build",
+        "dev": "cross-env ELECTRON_ENV=local   electron-vite dev",
+        "start:school": "npm run build:school  && electron out/main/index.js",
+        "start:staging": "npm run build:staging && electron out/main/index.js",
+        "start:realms": "npm run build:realms  && electron out/main/index.js",
         "dist:school": "npm run build:school  && electron-builder --win",
         "dist:staging": "npm run build:staging && electron-builder --win",
         "dist:realms": "npm run build:realms  && electron-builder --win",
@@ -113,31 +114,37 @@
         "dist:staging:linux": "npm run build:staging && electron-builder --linux",
         "dist:realms:linux": "npm run build:realms  && electron-builder --linux",
         "generate:icons": "node scripts/generate-icons.mjs",
-        "typecheck": "tsc --noEmit",
+        "typecheck": "electron-vite typecheck",
         "lint": "eslint src",
-        "format": "prettier --write \"src/**/*.{ts,tsx}\" \"static/**/*.html\""
+        "format": "prettier --write \"src/**/*.{ts,tsx}\" \"src/renderer/**/*.html\""
     },
     "dependencies": {
         "ffmpeg-static": "^5.2.0"
     },
     "devDependencies": {
+        "@electron/fuses": "^2.1.3",
         "@emotion/react": "^11.14.0",
         "@emotion/styled": "^11.14.1",
         "@mui/material": "^9.1.1",
         "@types/node": "^25.9.3",
         "@types/react": "^19.2.17",
         "@types/react-dom": "^19.2.3",
+        "@vitejs/plugin-react": "^4.7.0",
         "cross-env": "^7.0.3",
         "electron": "^42.6.1",
         "electron-builder": "^26.15.3",
+        "electron-vite": "^5.0.0",
         "esbuild": "^0.28.1",
         "eslint": "^9.39.4",
+        "i18next": "^26.3.6",
         "prettier": "^3.9.4",
         "react": "^19.2.7",
         "react-dom": "^19.2.7",
+        "react-i18next": "^17.0.9",
         "sharp": "^0.35.1",
         "typescript": "^6.0.3",
-        "typescript-eslint": "^8.63.0"
+        "typescript-eslint": "^8.63.0",
+        "vite": "^6.4.3"
     },
     "overrides": {
         "glob": "^13.0.0",

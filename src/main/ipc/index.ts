@@ -6,7 +6,7 @@ import { registerScreenCaptureHandlers } from "./screen-capture";
 import { registerWindowControlHandlers } from "./window-control";
 
 export function registerIpcHandlers(win: BrowserWindow, view: WebContentsView): void {
-    registerScreenCaptureHandlers();
+    registerScreenCaptureHandlers(view);
     registerWindowControlHandlers(win, view);
     registerAudioDeviceHandlers();
     registerAudioCaptureHandlers();

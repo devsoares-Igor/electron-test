@@ -1,5 +1,5 @@
 import path from "path";
-import { resolveLocale } from "./i18n";
+import { resolveLocale } from "./locale";
 import { APP_HOST, APP_URL, IS_LOCAL } from "./config";
 import { BrowserWindow, shell, WebContentsView } from "electron";
 
@@ -46,7 +46,7 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
             : process.platform === "darwin"
                 ? "icon.icns"
                 : "icon.png";
-    const iconPath = path.join(__dirname, "icons", iconFile);
+    const iconPath = path.join(__dirname, "..", "..", "static", "icons", iconFile);
 
     const locale = resolveLocale();
 
@@ -58,9 +58,10 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
         resizable: false,
         alwaysOnTop: true,
         skipTaskbar: true,
+        backgroundColor: "#313338",
         webPreferences: { nodeIntegration: false, contextIsolation: true },
     });
-    splash.loadFile(path.join(__dirname, "splash.html"), { query: { locale } });
+    splash.loadFile(path.join(__dirname, "..", "renderer", "splash", "index.html"), { query: { locale } });
     splash.setMenu(null);
 
     // Main window — hidden titlebar + native overlay (Discord/VS Code style)
@@ -77,22 +78,23 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
-            preload: path.join(__dirname, "titlebar-preload.js"),
+            preload: path.join(__dirname, "..", "preload", "titlebar.js"),
         },
     });
     win.setMenu(null);
-    win.loadFile(path.join(__dirname, "titlebar.html"), { query: { locale } });
+    win.loadFile(path.join(__dirname, "..", "renderer", "titlebar", "index.html"), { query: { locale } });
 
     // WebContentsView — app content below the titlebar
     const view = new WebContentsView({
         webPreferences: {
-            preload: path.join(__dirname, "preload.js"),
+            preload: path.join(__dirname, "..", "preload", "main.js"),
             contextIsolation: false,
             nodeIntegration: false,
             sandbox: false,
         },
     });
     win.contentView.addChildView(view);
+    view.setBackgroundColor("#313338");
 
     const updateBounds = () => {
         const [w, h] = win.getContentSize();
@@ -131,7 +133,7 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
             : IS_LOCAL
                 ? "devserver"
                 : "offline";
-        view.webContents.loadFile(path.join(__dirname, "offline.html"), { query: { reason, locale } });
+        view.webContents.loadFile(path.join(__dirname, "..", "renderer", "offline", "index.html"), { query: { reason, locale } });
     });
 
     // Child windows (chat detach, etc.)
@@ -148,7 +150,7 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
                     width: 900,
                     height: 700,
                     webPreferences: {
-                        preload: path.join(__dirname, "preload.js"),
+                        preload: path.join(__dirname, "..", "preload", "main.js"),
                         contextIsolation: false,
                         nodeIntegration: false,
                         sandbox: false,
@@ -179,6 +181,24 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
             };
         }
 
+        // Termos e Privacidade — abrem como popup interno
+        const isStaticDoc = url.startsWith("https://static.ip.tv/");
+        if (isStaticDoc) {
+            return {
+                action: "allow",
+                overrideBrowserWindowOptions: {
+                    width: 860,
+                    height: 640,
+                    resizable: true,
+                    webPreferences: {
+                        nodeIntegration: false,
+                        contextIsolation: true,
+                        sandbox: true,
+                    },
+                },
+            };
+        }
+
         // External links — only open http/https
         if (url.startsWith("https://") || url.startsWith("http://")) {
             shell.openExternal(url);
@@ -194,6 +214,9 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
 
     view.webContents.on("did-create-window", (child, details) => {
         child.setMenu(null);
+        child.setIcon(iconPath);
+        child.setTitle(" ");
+        child.webContents.on("page-title-updated", (e) => e.preventDefault());
 
         // Override the User-Agent on Google OAuth popups to avoid the
         // "disallowed_useragent" error that Google throws when detecting Electron.

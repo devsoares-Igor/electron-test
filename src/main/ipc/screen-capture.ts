@@ -1,10 +1,11 @@
 import path from "path";
+import { resolveWebLocale } from "../locale";
 import type { PickerResult, SourceData } from "../../shared/types/ipc";
-import { BrowserWindow, desktopCapturer, ipcMain, IpcMainEvent } from "electron";
+import { BrowserWindow, desktopCapturer, ipcMain, IpcMainEvent, WebContentsView } from "electron";
 
-export function registerScreenCaptureHandlers(): void {
+export function registerScreenCaptureHandlers(view: WebContentsView): void {
     ipcMain.handle("show-source-picker", (): Promise<PickerResult | null> => {
-        return openSourcePicker();
+        return openSourcePicker(view);
     });
 
     ipcMain.handle("get-screen-sources", async (): Promise<SourceData[]> => {
@@ -20,7 +21,8 @@ export function registerScreenCaptureHandlers(): void {
     });
 }
 
-async function openSourcePicker(): Promise<PickerResult | null> {
+async function openSourcePicker(view: WebContentsView): Promise<PickerResult | null> {
+    const locale = await resolveWebLocale(view);
     const sources = await desktopCapturer.getSources({
         types: ["screen", "window"],
         thumbnailSize: { width: 320, height: 180 },
@@ -42,20 +44,26 @@ async function openSourcePicker(): Promise<PickerResult | null> {
             resolve(result);
         };
 
+        const iconFile = process.platform === "win32" ? "icon.ico" : process.platform === "darwin" ? "icon.icns" : "icon.png";
+        const iconPath = path.join(__dirname, "..", "..", "static", "icons", iconFile);
+
         const pickerWin = new BrowserWindow({
             width: 820,
             height: 560,
             resizable: false,
-            title: "Compartilhar tela",
+            title: " ",
+            icon: iconPath,
             webPreferences: {
                 contextIsolation: true,
                 nodeIntegration: false,
                 sandbox: false,
-                preload: path.join(__dirname, "picker-preload.js"),
+                preload: path.join(__dirname, "..", "preload", "picker.js"),
             },
         });
+        pickerWin.setMenu(null);
+        pickerWin.webContents.on("page-title-updated", (e) => e.preventDefault());
 
-        pickerWin.loadFile(path.join(__dirname, "picker.html"));
+        pickerWin.loadFile(path.join(__dirname, "..", "renderer", "picker", "index.html"), { query: { locale } });
         pickerWin.setMenu(null);
 
         pickerWin.webContents.once("did-finish-load", () => {

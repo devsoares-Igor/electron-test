@@ -69,8 +69,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "
 # ── 4. Build inicial para verificar ──────────────────────────
 echo ""
 echo "→ [4/4] Build de verificação (env=school)..."
-ELECTRON_ENV=school node scripts/build.mjs
-rsync -a --delete build/ "$WIN_DIR_WSL/build/"
+ELECTRON_ENV=school npx electron-vite build
+rsync -a --delete out/ "$WIN_DIR_WSL/out/"
 echo "  ✓ Build copiado para Windows"
 
 echo ""

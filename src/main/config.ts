@@ -24,7 +24,6 @@ export const IS_LOCAL =
 export const DEVTOOLS_PASSWORD: string =
     typeof __DEVTOOLS_PASSWORD__ !== "undefined" ? __DEVTOOLS_PASSWORD__ : "realms-dev";
 
-/** Base hostname derived from APP_URL (e.g. "schoolwebv2.ip.tv") */
 export const APP_HOST = (() => {
     try {
         return new URL(APP_URL).hostname;
@@ -32,3 +31,8 @@ export const APP_HOST = (() => {
         return "schoolwebv2.ip.tv";
     }
 })();
+
+export function realmsUrl(file: string, query?: Record<string, string>): string {
+    const params = query ? "?" + new URLSearchParams(query).toString() : "";
+    return `realms://app/${file}${params}`;
+}
