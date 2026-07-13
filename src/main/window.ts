@@ -1,7 +1,8 @@
 import path from "path";
 import { resolveLocale } from "./locale";
 import { APP_HOST, APP_URL, IS_LOCAL } from "./config";
-import { BrowserWindow, shell, WebContentsView } from "electron";
+import { SessionManager } from "./accounts/SessionManager";
+import { BrowserWindow, ipcMain, shell, WebContentsView } from "electron";
 
 const TB_HEIGHT = 32;
 
@@ -116,8 +117,43 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
     applyPermissions(win);
     view.webContents.session.disableNetworkEmulation();
 
-    // Load the app
-    view.webContents.loadURL(APP_URL);
+    const loadAccountSelect = () => {
+        view.webContents.loadFile(
+            path.join(__dirname, "..", "renderer", "account-select", "index.html"),
+            { query: { locale } },
+        );
+    };
+
+    const loadApp = () => {
+        view.webContents.loadURL(APP_URL);
+        // Reset drag regions que podem ter ficado do account-select
+        view.webContents.once("dom-ready", () => {
+            view.webContents.executeJavaScript("document.documentElement.style.WebkitAppRegion='no-drag'; true").catch(() => { });
+        });
+    };
+
+    // accounts:load-app → carrega o app dentro da view
+    ipcMain.on("accounts:load-app", loadApp);
+    // accounts:show-select → volta para tela de contas (chamado pelo menu ⋮)
+    ipcMain.on("accounts:show-select", loadAccountSelect);
+
+    // Detecta logout → volta para account-select
+    view.webContents.on("did-navigate", (_e, url) => {
+        try {
+            const { pathname } = new URL(url);
+            const isLoginPage = pathname === "/login" || pathname === "/login/";
+            if (isLoginPage && SessionManager.count() > 0) {
+                setTimeout(loadAccountSelect, 400);
+            }
+        } catch { /* ignore */ }
+    });
+
+    // Startup
+    if (SessionManager.count() > 0) {
+        loadAccountSelect();
+    } else {
+        loadApp();
+    }
 
     // Offline fallback
     view.webContents.on("did-fail-load", (_e, errorCode, _desc, validatedURL) => {

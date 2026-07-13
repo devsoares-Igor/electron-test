@@ -3,6 +3,31 @@ import { createDShowStream, DSHOW_DEVICE_PREFIX, scheduleCaptureTeardown, stopCa
 
 declare const __ELECTRON_SOURCE_HOST__: string;
 
+// ─── Injetar sessão de auto-login ANTES do React inicializar ─────────────────
+try {
+    // Limpar sessão se foi solicitado (ex: "Entrar com outra conta")
+    const shouldClear = ipcRenderer.sendSync("session:should-clear") as boolean;
+    if (shouldClear) {
+        localStorage.removeItem("Data");
+        localStorage.removeItem("RealmConfig");
+        localStorage.removeItem("Realm");
+        console.log("[preload] session cleared for fresh login");
+    }
+
+    // Injetar sessão de auto-login se existir
+    const injection = ipcRenderer.sendSync("session:get-injection") as string | null;
+    if (injection) {
+        const { realm, realmConfig, data } = JSON.parse(injection) as {
+            realm: string; realmConfig: string; data: string;
+        };
+        localStorage.setItem("Realm", realm);
+        localStorage.setItem("RealmConfig", realmConfig);
+        localStorage.setItem("Data", data);
+        console.log("[preload] session injected for realm:", realm);
+    }
+} catch { /* non-fatal */ }
+// ─────────────────────────────────────────────────────────────────────────────
+
 window.electronAPI = {
     platform: process.platform,
     isElectron: true,
@@ -10,11 +35,101 @@ window.electronAPI = {
     listSystemAudioDevices: () => ipcRenderer.invoke("list-system-audio-devices"),
 };
 
+window.accountsAPI = {
+    list: () => ipcRenderer.invoke("accounts:list"),
+    count: () => ipcRenderer.invoke("accounts:count"),
+    remove: (id: string) => ipcRenderer.invoke("accounts:remove", id),
+    removeAll: () => ipcRenderer.invoke("accounts:remove-all"),
+    login: (id: string) => ipcRenderer.invoke("accounts:login", id),
+    loadApp: () => ipcRenderer.send("accounts:load-app"),
+    loadFresh: () => ipcRenderer.send("accounts:load-app-fresh"),
+    savePending: () => ipcRenderer.invoke("accounts:save-pending"),
+    skipSave: () => ipcRenderer.invoke("accounts:skip-save"),
+    getPending: () => ipcRenderer.invoke("accounts:get-pending"),
+};
+
 if (window.location.protocol === "file:" && typeof __ELECTRON_SOURCE_HOST__ !== "undefined") {
     try {
         localStorage.setItem("devRealmHostname", __ELECTRON_SOURCE_HOST__);
     } catch { /* storage blocked */ }
 }
+
+// ─── Intercept POST /device (fetch + XHR/axios) ───────────────────────────────
+
+function notifyLoginSuccess(url: string, reqBody: Record<string, unknown>, resBody: Record<string, unknown>): void {
+    console.log("[accounts] notifyLoginSuccess", url, !!reqBody.nick, !!resBody.auth_token);
+    if (!reqBody.nick || !reqBody.password || !resBody.auth_token) return;
+    console.log("[accounts] sending device:login-success for", reqBody.nick);
+    ipcRenderer.send("device:login-success", {
+        nick: reqBody.nick,
+        realm: reqBody.realm ?? "",
+        password: reqBody.password,
+        name: resBody.name ?? reqBody.nick,
+        apiBaseUrl: new URL(url).origin,
+    });
+}
+
+// Intercept native fetch
+const _origFetch = window.fetch.bind(window);
+(window as Window & typeof globalThis).fetch = async function (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+): Promise<Response> {
+    const url = typeof input === "string" ? input
+        : input instanceof URL ? input.href
+            : (input as Request).url;
+    const method = (init?.method ?? (input instanceof Request ? input.method : "GET")).toUpperCase();
+
+    if (method === "POST" && url.includes("/device")) {
+        let reqBody: Record<string, unknown> = {};
+        try { reqBody = JSON.parse((init?.body as string) ?? "{}"); } catch { /* ignore */ }
+
+        const response = await _origFetch(input as RequestInfo, init);
+
+        if (response.ok) {
+            try {
+                const data = await response.clone().json() as Record<string, unknown>;
+                notifyLoginSuccess(url, reqBody, data);
+            } catch { /* ignore */ }
+        }
+
+        return response;
+    }
+
+    return _origFetch(input as RequestInfo, init);
+};
+
+// Intercept XMLHttpRequest (axios uses XHR by default in browsers)
+const _XHROpen = XMLHttpRequest.prototype.open;
+const _XHRSend = XMLHttpRequest.prototype.send;
+
+XMLHttpRequest.prototype.open = function (
+    method: string, url: string | URL, ...rest: unknown[]
+) {
+    (this as XMLHttpRequest & { _method?: string; _url?: string })._method = method.toUpperCase();
+    (this as XMLHttpRequest & { _method?: string; _url?: string })._url = String(url); if (method.toUpperCase() === "POST" && String(url).includes("/device")) {
+        console.log("[accounts] XHR open intercepted:", method, String(url));
+    } return (_XHROpen as Function).call(this, method, url, ...rest);
+};
+
+XMLHttpRequest.prototype.send = function (body?: Document | XMLHttpRequestBodyInit | null) {
+    const self = this as XMLHttpRequest & { _method?: string; _url?: string };
+    if (self._method === "POST" && self._url?.includes("/device")) {
+        let reqBody: Record<string, unknown> = {};
+        try { reqBody = JSON.parse(String(body ?? "{}")); } catch { /* ignore */ }
+
+        self.addEventListener("load", function () {
+            if (self.status >= 200 && self.status < 300) {
+                try {
+                    const data = JSON.parse(self.responseText) as Record<string, unknown>;
+                    notifyLoginSuccess(self._url!, reqBody, data);
+                } catch { /* ignore */ }
+            }
+        }, { once: true });
+    }
+    return _XHRSend.call(this, body);
+};
+// ─────────────────────────────────────────────────────────────────────────────
 
 window.addEventListener("DOMContentLoaded", () => {
     navigator.mediaDevices

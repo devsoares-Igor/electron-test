@@ -1,4 +1,5 @@
 import type { PickerResult, SourceData } from "./ipc";
+import type { SavedAccount, AutoLoginResult, PendingSession } from "../../main/accounts/types";
 
 declare module "react" {
     interface CSSProperties {
@@ -24,11 +25,23 @@ declare global {
         };
         titlebarAPI: {
             reload(): void;
-            openDevtools(password: string): Promise<boolean>;
-            showDevtoolsDialog(): void;
+            showMenu(): void;
             getZoom(): Promise<number>;
             setZoom(percent: number): void;
-            showMenu(): void;
+            showAccountSelect?(): void;
+            hasSavedAccounts?(): Promise<boolean>;
+        };
+        accountsAPI: {
+            list(): Promise<SavedAccount[]>;
+            count(): Promise<number>;
+            remove(id: string): Promise<void>;
+            removeAll(): Promise<void>;
+            login(id: string): Promise<AutoLoginResult>;
+            loadApp(): void;
+            loadFresh?(): void;
+            savePending(): Promise<void>;
+            skipSave(): Promise<void>;
+            getPending(): Promise<PendingSession | null>;
         };
     }
 }
