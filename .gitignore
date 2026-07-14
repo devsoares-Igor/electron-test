@@ -2,7 +2,6 @@
 build/
 dist/
 out/
-renderer/
 
 # Dependencies
 node_modules/

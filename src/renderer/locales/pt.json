@@ -1,0 +1,69 @@
+{
+    "splash": {
+        "loading": "Carregando..."
+    },
+    "titlebar": {
+        "reload": "Recarregar (F5)",
+        "switchAccount": "Trocar de conta",
+        "zoom": "Zoom",
+        "resetZoom": "Redefinir zoom",
+        "zoomIn": "Aumentar zoom",
+        "zoomOut": "Diminuir zoom",
+        "devtools": "Ferramentas do desenvolvedor",
+        "devtoolsLabel": "Senha para DevTools",
+        "placeholder": "Digite a senha...",
+        "cancel": "Cancelar",
+        "confirm": "Abrir"
+    },
+    "offline": {
+        "offlineTitle": "Sem conexão com a rede",
+        "offlineSubtitle": "Não foi possível conectar. Verifique seu Wi-Fi ou cabo de rede e tente novamente.",
+        "offlineCaption": "Erro de conexão",
+        "devTitle": "Servidor de desenvolvimento offline",
+        "devSubtitle": "O servidor Vite não está respondendo em localhost:3000. Execute npm run dev no projeto client.",
+        "devCaption": "Modo desenvolvimento",
+        "retry": "Tentar novamente"
+    },
+    "saveSession": {
+        "title": "Salvar esta sessão neste dispositivo?",
+        "subtitle": "Ao salvar, você poderá entrar novamente com esta conta sem precisar digitar a senha.",
+        "device": "Utilize esta opção apenas em dispositivos confiáveis.",
+        "skip": "Agora não",
+        "save": "Salvar sessão",
+        "savedTitle": "Sessão salva!",
+        "savedSubtitle": "Da próxima vez, entre com um clique."
+    },
+    "accounts": {
+        "welcome": "Quem está usando?",
+        "emptyTitle": "Bem-vindo!",
+        "emptySubtitle": "Entre com sua conta para continuar.",
+        "signIn": "Entrar",
+        "otherAccount": "Entrar com outra conta",
+        "manage": "Gerenciar contas",
+        "done": "Concluído",
+        "remove": "Remover",
+        "removeAll": "Remover todas",
+        "removeAllTitle": "Remover todas as contas?",
+        "removeAllDesc": "Esta ação removerá todas as contas salvas neste dispositivo.",
+        "cancel": "Cancelar",
+        "savedAccounts": "Gerenciar contas salvas",
+        "savedDesc": "Estas contas estão salvas neste dispositivo.",
+        "lastAccess": "Último acesso",
+        "community": "Comunidade",
+        "loginError": "Não foi possível fazer login. Verifique suas credenciais.",
+        "timeNow": "Agora, {{time}}",
+        "timeToday": "Hoje, {{time}}",
+        "timeYesterday": "Ontem, {{time}}"
+    },
+    "picker": {
+        "title": "Escolha o que compartilhar",
+        "subtitle": "O site terá acesso ao conteúdo da sua tela",
+        "tabScreen": "Tela inteira",
+        "tabWindow": "Janela",
+        "noSources": "Nenhuma fonte disponível",
+        "macPermission": "No macOS, autorize em Preferências → Privacidade → Gravação de Tela.",
+        "shareAudio": "Compartilhar também o áudio da tela",
+        "cancel": "Cancelar",
+        "share": "Compartilhar"
+    }
+}

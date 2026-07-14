@@ -1,0 +1,69 @@
+{
+    "splash": {
+        "loading": "Cargando..."
+    },
+    "titlebar": {
+        "reload": "Recargar (F5)",
+        "switchAccount": "Cambiar de cuenta",
+        "zoom": "Zoom",
+        "resetZoom": "Restablecer zoom",
+        "zoomIn": "Acercar",
+        "zoomOut": "Alejar",
+        "devtools": "Herramientas de desarrollador",
+        "devtoolsLabel": "Contraseña DevTools",
+        "placeholder": "Ingresa la contraseña...",
+        "cancel": "Cancelar",
+        "confirm": "Abrir"
+    },
+    "offline": {
+        "offlineTitle": "Sin conexión a internet",
+        "offlineSubtitle": "No se pudo conectar. Verifica tu Wi-Fi o cable de red e inténtalo de nuevo.",
+        "offlineCaption": "Error de conexión",
+        "devTitle": "Servidor de desarrollo sin conexión",
+        "devSubtitle": "El servidor Vite no responde en localhost:3000. Ejecuta npm run dev en el proyecto client.",
+        "devCaption": "Modo desarrollo",
+        "retry": "Volver a intentar"
+    },
+    "saveSession": {
+        "title": "¿Guardar esta sesión en este dispositivo?",
+        "subtitle": "Al guardar, podrás iniciar sesión nuevamente sin escribir tu contraseña.",
+        "device": "Usa esta opción solo en dispositivos de confianza.",
+        "skip": "Ahora no",
+        "save": "Guardar sesión",
+        "savedTitle": "¡Sesión guardada!",
+        "savedSubtitle": "La próxima vez, inicia sesión con un clic."
+    },
+    "accounts": {
+        "welcome": "¿Quién está usando?",
+        "emptyTitle": "¡Bienvenido!",
+        "emptySubtitle": "Inicia sesión en tu cuenta para continuar.",
+        "signIn": "Iniciar sesión",
+        "otherAccount": "Usar otra cuenta",
+        "manage": "Administrar cuentas",
+        "done": "Listo",
+        "remove": "Eliminar",
+        "removeAll": "Eliminar todas",
+        "removeAllTitle": "¿Eliminar todas las cuentas?",
+        "removeAllDesc": "Esto eliminará todas las cuentas guardadas en este dispositivo.",
+        "cancel": "Cancelar",
+        "savedAccounts": "Administrar cuentas guardadas",
+        "savedDesc": "Estas cuentas están guardadas en este dispositivo.",
+        "lastAccess": "Último acceso",
+        "community": "Comunidad",
+        "loginError": "No se pudo iniciar sesión. Verifica tus credenciales.",
+        "timeNow": "Ahora, {{time}}",
+        "timeToday": "Hoy, {{time}}",
+        "timeYesterday": "Ayer, {{time}}"
+    },
+    "picker": {
+        "title": "Elige qué compartir",
+        "subtitle": "El sitio tendrá acceso al contenido de tu pantalla",
+        "tabScreen": "Pantalla completa",
+        "tabWindow": "Ventana",
+        "noSources": "No hay fuentes disponibles",
+        "macPermission": "En macOS, ve a Preferencias → Privacidad → Grabación de pantalla.",
+        "shareAudio": "Compartir también el audio de pantalla",
+        "cancel": "Cancelar",
+        "share": "Compartir"
+    }
+}

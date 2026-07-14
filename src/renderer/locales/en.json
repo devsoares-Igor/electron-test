@@ -1,0 +1,69 @@
+{
+    "splash": {
+        "loading": "Loading..."
+    },
+    "titlebar": {
+        "reload": "Reload (F5)",
+        "switchAccount": "Switch account",
+        "zoom": "Zoom",
+        "resetZoom": "Reset zoom",
+        "zoomIn": "Zoom in",
+        "zoomOut": "Zoom out",
+        "devtools": "Developer tools",
+        "devtoolsLabel": "DevTools password",
+        "placeholder": "Enter password...",
+        "cancel": "Cancel",
+        "confirm": "Open"
+    },
+    "offline": {
+        "offlineTitle": "No internet connection",
+        "offlineSubtitle": "Could not connect. Check your Wi-Fi or network cable and try again.",
+        "offlineCaption": "Connection error",
+        "devTitle": "Dev server offline",
+        "devSubtitle": "The Vite server is not responding at localhost:3000. Run npm run dev in the client project.",
+        "devCaption": "Development mode",
+        "retry": "Try again"
+    },
+    "saveSession": {
+        "title": "Save this session on this device?",
+        "subtitle": "Once saved, you can sign in again without typing your password.",
+        "device": "Only use this option on trusted devices.",
+        "skip": "Not now",
+        "save": "Save session",
+        "savedTitle": "Session saved!",
+        "savedSubtitle": "Next time, sign in with one click."
+    },
+    "accounts": {
+        "welcome": "Who's watching?",
+        "emptyTitle": "Welcome!",
+        "emptySubtitle": "Sign in to your account to continue.",
+        "signIn": "Sign in",
+        "otherAccount": "Use another account",
+        "manage": "Manage accounts",
+        "done": "Done",
+        "remove": "Remove",
+        "removeAll": "Remove all",
+        "removeAllTitle": "Remove all accounts?",
+        "removeAllDesc": "This will remove all saved accounts from this device.",
+        "cancel": "Cancel",
+        "savedAccounts": "Manage saved accounts",
+        "savedDesc": "These accounts are saved on this device.",
+        "lastAccess": "Last access",
+        "community": "Community",
+        "loginError": "Could not sign in. Please check your credentials.",
+        "timeNow": "Now, {{time}}",
+        "timeToday": "Today, {{time}}",
+        "timeYesterday": "Yesterday, {{time}}"
+    },
+    "picker": {
+        "title": "Choose what to share",
+        "subtitle": "The site will have access to your screen content",
+        "tabScreen": "Full screen",
+        "tabWindow": "Window",
+        "noSources": "No sources available",
+        "macPermission": "On macOS, go to Preferences → Privacy → Screen Recording.",
+        "shareAudio": "Also share screen audio",
+        "cancel": "Cancel",
+        "share": "Share"
+    }
+}
