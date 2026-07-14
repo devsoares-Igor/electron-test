@@ -1,7 +1,6 @@
 import path from "path";
 import { reloadApp } from "../window";
 import { resolveWebLocale } from "../locale";
-import { DEVTOOLS_PASSWORD } from "../config";
 import { BrowserWindow, ipcMain, WebContentsView } from "electron";
 
 export function registerWindowControlHandlers(win: BrowserWindow, view: WebContentsView): void {
@@ -10,13 +9,6 @@ export function registerWindowControlHandlers(win: BrowserWindow, view: WebConte
 
     ipcMain.removeAllListeners("reload-view");
     ipcMain.on("reload-view", () => view.webContents.reload());
-
-    ipcMain.removeHandler("open-devtools");
-    ipcMain.handle("open-devtools", (_event, password: string) => {
-        if (password !== DEVTOOLS_PASSWORD) return false;
-        view.webContents.openDevTools({ mode: "detach" });
-        return true;
-    });
 
     ipcMain.removeHandler("get-zoom");
     ipcMain.handle("get-zoom", () => Math.round(view.webContents.zoomFactor * 100));

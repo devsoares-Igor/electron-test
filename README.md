@@ -25,7 +25,13 @@ Aplicativo desktop do **Realms WebClient** construído com Electron + electron-v
 │   │   ├── config.ts       # URLs e variáveis de ambiente
 │   │   ├── locale.ts       # Detecção de idioma
 │   │   ├── permissions.ts  # Permissões de mídia
+│   │   ├── accounts/       # Gerenciamento de contas salvas
+│   │   │   ├── SessionManager.ts   # CRUD de sessões (JSON + keychain)
+│   │   │   ├── CredentialManager.ts# Criptografia de senhas
+│   │   │   ├── RealmResolver.ts    # Resolução de URL de API por realm
+│   │   │   └── types.ts
 │   │   ├── ipc/            # Handlers IPC
+│   │   │   ├── accounts.ts # Login automático, salvar/remover sessões
 │   │   │   ├── audio-capture.ts
 │   │   │   ├── audio-devices.ts
 │   │   │   ├── screen-capture.ts
@@ -36,18 +42,20 @@ Aplicativo desktop do **Realms WebClient** construído com Electron + electron-v
 │   │       └── capture-session.ts
 │   │
 │   ├── preload/            # Bridge main ↔ renderer
-│   │   ├── main.ts         # Preload da janela principal (getUserMedia, dshow)
+│   │   ├── main.ts         # Preload da janela principal (getUserMedia, dshow, botão trocar conta)
 │   │   ├── titlebar.ts     # Preload da titlebar (reload, zoom, devtools)
+│   │   ├── save-session.ts # Preload do diálogo de salvar sessão
 │   │   ├── picker.ts       # Preload do picker de tela
-│   │   └── dshow-stream.ts # Módulo de captura DirectShow (importado por main.ts)
+│   │   └── dshow-stream.ts # Módulo de captura DirectShow
 │   │
 │   ├── renderer/           # React — uma pasta por janela
 │   │   ├── splash/         # Tela de carregamento
 │   │   ├── titlebar/       # Barra de título customizada
-│   │   ├── titlebar-menu/  # Popup do menu ⋮ (zoom + devtools)
+│   │   ├── titlebar-menu/  # Popup do menu ⋮ (zoom + trocar conta)
 │   │   ├── offline/        # Página de erro de conexão
 │   │   ├── picker/         # Seletor de compartilhamento de tela
-│   │   ├── devtools-dialog/# Dialog de senha do DevTools
+│   │   ├── account-select/ # Tela de seleção de conta salva
+│   │   ├── save-session/   # Diálogo flutuante "Salvar sessão"
 │   │   ├── components/     # Biblioteca de componentes MUI
 │   │   │   ├── AppButton.tsx
 │   │   │   ├── AppIconButton.tsx
@@ -64,7 +72,7 @@ Aplicativo desktop do **Realms WebClient** construído com Electron + electron-v
 │   │
 │   └── shared/
 │       └── types/
-│           ├── global.d.ts # Tipos de window.electronAPI, pickerAPI, titlebarAPI
+│           ├── global.d.ts # Tipos de window.electronAPI, accountsAPI, titlebarAPI
 │           └── ipc.ts      # Tipos de mensagens IPC
 │
 ├── assets/                 # Banner do installer NSIS
@@ -72,6 +80,7 @@ Aplicativo desktop do **Realms WebClient** construído com Electron + electron-v
 ├── scripts/after-pack.mjs  # Hook electron-builder (electron fuses)
 ├── build-win.sh            # Build completo → installer Windows
 ├── run-win.sh              # Build + execução rápida no Windows (dev)
+├── setup.sh                # Setup inicial (instala deps WSL + Windows)
 ├── electron.vite.config.ts
 └── package.json
 ```
@@ -135,6 +144,25 @@ Gera `Realms Setup <versão>.exe` via electron-builder (NSIS, x64 only).
 
 ## IPC — APIs expostas ao renderer
 
+### `window.accountsAPI` (preload: main.ts + save-session.ts)
+
+```ts
+list(): Promise<SavedAccount[]>          // lista contas salvas
+count(): Promise<number>                 // total de contas
+login(id: string): Promise<AutoLoginResult> // auto-login via API
+remove(id: string): Promise<void>
+removeAll(): Promise<void>
+loadApp(): void                          // carrega a web app
+loadFresh?(): void                       // carrega sem sessão salva
+savePending(): Promise<void>             // salva a sessão pendente
+skipSave(): Promise<void>               // descarta a sessão pendente
+getPending(): Promise<PendingSession|null>
+```
+
+> **Fluxo de auto-login:** ao navegar para `/login` com contas salvas, a app redireciona automaticamente para `account-select`. Ao fazer login via web, o preload intercepta o POST `/device` e dispara o diálogo `save-session`.
+
+---
+
 ### `window.electronAPI` (preload: main.ts)
 
 ```ts
@@ -148,11 +176,11 @@ listSystemAudioDevices(): Promise<...> // lista dispositivos de áudio do SO
 
 ```ts
 reload(): void
-openDevtools(password: string): Promise<boolean>
-showDevtoolsDialog(): void
-showMenu(): void          // abre/fecha o menu ⋮
+showMenu(): void                              // abre/fecha o menu ⋮
 getZoom(): Promise<number>
 setZoom(percent: number): void
+showAccountSelect?(): void                    // volta para account-select
+hasSavedAccounts?(): Promise<boolean>         // há contas salvas?
 ```
 
 ### `window.pickerAPI` (preload: picker.ts)
@@ -188,4 +216,4 @@ O `FfmpegManager` tenta resolver o binário na seguinte ordem:
 
 ## Versão
 
-**1.0.0**
+**1.2.0**

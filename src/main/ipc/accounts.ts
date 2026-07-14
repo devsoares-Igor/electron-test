@@ -1,6 +1,7 @@
 import path from "path";
 import * as https from "https";
 import { APP_URL } from "../config";
+import { resolveLocale } from "../locale";
 import { SessionManager } from "../accounts/SessionManager";
 import { resolveApiBaseUrl } from "../accounts/RealmResolver";
 import { BrowserWindow, ipcMain, WebContentsView } from "electron";
@@ -32,7 +33,7 @@ export function registerAccountHandlers(win: BrowserWindow, view: WebContentsVie
         pendingClearSession = false;
     });
 
-    // accounts:load-app-fresh → limpa sessão e carrega login fresco
+    // accounts:load-app-fresh → limpa sessão e carrega login fresco (sem loading page)
     ipcMain.on("accounts:load-app-fresh", () => {
         pendingClearSession = true;
         view.webContents.loadURL(APP_URL);
@@ -47,7 +48,8 @@ export function registerAccountHandlers(win: BrowserWindow, view: WebContentsVie
             password,
         );
         pendingSession = null;
-        saveSessionWin?.destroy();
+        // Notifica a web view para exibir o botão de trocar conta
+        view.webContents.send("accounts:session-saved");
     });
 
     ipcMain.handle("accounts:skip-save", () => {
@@ -66,7 +68,6 @@ export function registerAccountHandlers(win: BrowserWindow, view: WebContentsVie
         try {
             const apiBaseUrl = account.apiBaseUrl || resolveApiBaseUrl(account.realm);
 
-            console.log("[accounts:login] apiBaseUrl:", apiBaseUrl, "nick:", account.nick, "realm:", account.realm);
             const [realmData, userData] = await withTimeout(Promise.all([
                 apiGet(`${apiBaseUrl}/mas/realm/${account.realm}/config`),
                 apiPost(`${apiBaseUrl}/device`, {
@@ -82,7 +83,6 @@ export function registerAccountHandlers(win: BrowserWindow, view: WebContentsVie
             ]), 15_000);
 
             if (!userData?.auth_token) {
-                console.error("[accounts:login] API error:", JSON.stringify(userData));
                 const msg = (userData?.message as string) || (userData?.error as string) || JSON.stringify(userData).slice(0, 120);
                 return { success: false, error: msg || "Credenciais inválidas" };
             }
@@ -104,9 +104,7 @@ export function registerAccountHandlers(win: BrowserWindow, view: WebContentsVie
         }
     });
 
-    // accounts:load-app é gerenciado em window.ts (ipcMain.once) para destruir o accountWin
-    // Aqui apenas garantimos que o APP_URL carregue se o handler do once já tiver disparado
-    ipcMain.on("accounts:load-app-fallback", () => view.webContents.loadURL(APP_URL));
+    // accounts:load-app e accounts:show-select são gerenciados em window.ts
 
     // Triggered by preload when POST /device succeeds (fresh web login)
     ipcMain.on("device:login-success", (_e, session: PendingSession) => {
@@ -125,7 +123,7 @@ function openSaveSessionDialog(win: BrowserWindow): void {
     if (saveSessionWin && !saveSessionWin.isDestroyed()) return;
 
     const { x, y, width, height } = win.getBounds();
-    const W = 440, H = 300;
+    const W = 440, H = 350;
 
     saveSessionWin = new BrowserWindow({
         width: W, height: H,
@@ -138,16 +136,16 @@ function openSaveSessionDialog(win: BrowserWindow): void {
         backgroundColor: "#00000000",
         transparent: true,
         roundedCorners: true,
+        hasShadow: false,
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
-            preload: path.join(__dirname, "..", "preload", "account-select.js"),
+            preload: path.join(__dirname, "..", "preload", "save-session.js"),
         },
     });
     saveSessionWin.setMenu(null);
     saveSessionWin.loadFile(
-        path.join(__dirname, "..", "renderer", "save-session", "index.html"),
-    );
+        path.join(__dirname, "..", "renderer", "save-session", "index.html"), { query: { locale: resolveLocale() } },);
     saveSessionWin.on("closed", () => { saveSessionWin = null; });
 }
 

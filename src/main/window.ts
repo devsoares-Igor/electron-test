@@ -59,7 +59,7 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
         resizable: false,
         alwaysOnTop: true,
         skipTaskbar: true,
-        backgroundColor: "#313338",
+        backgroundColor: "#0F172A",
         webPreferences: { nodeIntegration: false, contextIsolation: true },
     });
     splash.loadFile(path.join(__dirname, "..", "renderer", "splash", "index.html"), { query: { locale } });
@@ -74,8 +74,8 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
         icon: iconPath,
         show: false,
         titleBarStyle: "hidden",
-        backgroundColor: "#2B2D31",
-        titleBarOverlay: { color: "#2B2D31", symbolColor: "#B5BAC1", height: TB_HEIGHT },
+        backgroundColor: "#1E293B",
+        titleBarOverlay: { color: "#1E293B", symbolColor: "#94A3B8", height: TB_HEIGHT },
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
@@ -95,7 +95,7 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
         },
     });
     win.contentView.addChildView(view);
-    view.setBackgroundColor("#313338");
+    view.setBackgroundColor("#0F172A");
 
     const updateBounds = () => {
         const [w, h] = win.getContentSize();
@@ -125,11 +125,8 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
     };
 
     const loadApp = () => {
+        view.setBackgroundColor("#0F172A");
         view.webContents.loadURL(APP_URL);
-        // Reset drag regions que podem ter ficado do account-select
-        view.webContents.once("dom-ready", () => {
-            view.webContents.executeJavaScript("document.documentElement.style.WebkitAppRegion='no-drag'; true").catch(() => { });
-        });
     };
 
     // accounts:load-app → carrega o app dentro da view

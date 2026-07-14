@@ -11,7 +11,6 @@ try {
         localStorage.removeItem("Data");
         localStorage.removeItem("RealmConfig");
         localStorage.removeItem("Realm");
-        console.log("[preload] session cleared for fresh login");
     }
 
     // Injetar sessão de auto-login se existir
@@ -23,7 +22,6 @@ try {
         localStorage.setItem("Realm", realm);
         localStorage.setItem("RealmConfig", realmConfig);
         localStorage.setItem("Data", data);
-        console.log("[preload] session injected for realm:", realm);
     }
 } catch { /* non-fatal */ }
 // ─────────────────────────────────────────────────────────────────────────────
@@ -57,9 +55,7 @@ if (window.location.protocol === "file:" && typeof __ELECTRON_SOURCE_HOST__ !== 
 // ─── Intercept POST /device (fetch + XHR/axios) ───────────────────────────────
 
 function notifyLoginSuccess(url: string, reqBody: Record<string, unknown>, resBody: Record<string, unknown>): void {
-    console.log("[accounts] notifyLoginSuccess", url, !!reqBody.nick, !!resBody.auth_token);
     if (!reqBody.nick || !reqBody.password || !resBody.auth_token) return;
-    console.log("[accounts] sending device:login-success for", reqBody.nick);
     ipcRenderer.send("device:login-success", {
         nick: reqBody.nick,
         realm: reqBody.realm ?? "",
@@ -107,9 +103,8 @@ XMLHttpRequest.prototype.open = function (
     method: string, url: string | URL, ...rest: unknown[]
 ) {
     (this as XMLHttpRequest & { _method?: string; _url?: string })._method = method.toUpperCase();
-    (this as XMLHttpRequest & { _method?: string; _url?: string })._url = String(url); if (method.toUpperCase() === "POST" && String(url).includes("/device")) {
-        console.log("[accounts] XHR open intercepted:", method, String(url));
-    } return (_XHROpen as Function).call(this, method, url, ...rest);
+    (this as XMLHttpRequest & { _method?: string; _url?: string })._url = String(url);
+    return (_XHROpen as (method: string, url: string | URL, ...rest: unknown[]) => void).call(this, method, url, ...rest);
 };
 
 XMLHttpRequest.prototype.send = function (body?: Document | XMLHttpRequestBodyInit | null) {
@@ -136,6 +131,85 @@ window.addEventListener("DOMContentLoaded", () => {
         .getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } })
         .then(s => s.getTracks().forEach(t => t.stop()))
         .catch(() => undefined);
+
+    // Botão flutuante "Trocar de conta" — só em / e /login
+    const SWITCH_ROUTES = new Set(["/", "/login"]);
+    const shouldShowSwitch = () => SWITCH_ROUTES.has(window.location.pathname.replace(/\/$/, "") || "/");
+
+    // Label localizado (mesmo mapeamento de src/main/locale.ts)
+    const _lang = navigator.language.split("-")[0].toLowerCase();
+    const switchLabel = ({ pt: "Trocar de conta", es: "Cambiar de cuenta" } as Record<string, string>)[_lang] ?? "Switch account";
+
+    const createSwitchBtn = () => {
+        if (document.getElementById("__realms_switch_account__")) return;
+        const btn = document.createElement("button");
+        btn.id = "__realms_switch_account__";
+        btn.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
+            <span>${switchLabel}</span>
+        `;
+        Object.assign(btn.style, {
+            position: "fixed", bottom: "auto", top: "8px", left: "16px", right: "auto",
+            zIndex: "2147483647", display: "flex", alignItems: "center", gap: "8px",
+            padding: "8px 16px",
+            background: "rgba(30,41,59,0.96)", color: "#94A3B8",
+            border: "1px solid rgba(255,255,255,0.07)", borderRadius: "10px",
+            fontSize: "13px", fontFamily: "'Inter', system-ui, sans-serif",
+            fontWeight: "500", cursor: "pointer",
+            backdropFilter: "blur(12px)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
+            transition: "background 0.15s, color 0.15s, transform 0.1s", outline: "none",
+        });
+        btn.addEventListener("mouseenter", () => { btn.style.background = "rgba(51,65,85,0.98)"; btn.style.color = "#F1F5F9"; btn.style.transform = "translateY(-1px)"; });
+        btn.addEventListener("mouseleave", () => { btn.style.background = "rgba(30,41,59,0.96)"; btn.style.color = "#94A3B8"; btn.style.transform = "translateY(0)"; });
+        btn.addEventListener("click", () => {
+            // Barra de loading enquanto a tela de contas carrega
+            const style = document.createElement("style");
+            style.textContent = "@keyframes __realms_slide{0%{background-position:200% 0}100%{background-position:-200% 0}}";
+            document.head.appendChild(style);
+            const bar = document.createElement("div");
+            bar.style.cssText = "position:fixed;top:0;left:0;right:0;height:3px;z-index:2147483647;background:linear-gradient(90deg,#60A5FA 0%,#3B82F6 40%,#60A5FA 100%);background-size:200% 100%;animation:__realms_slide 0.9s linear infinite;";
+            document.body.appendChild(bar);
+            ipcRenderer.send("accounts:show-select");
+        });
+        document.body.appendChild(btn);
+    };
+
+    const removeSwitchBtn = () => document.getElementById("__realms_switch_account__")?.remove();
+
+    const updateSwitchBtn = () => {
+        if (shouldShowSwitch()) createSwitchBtn();
+        else removeSwitchBtn();
+    };
+
+    const setupHistoryListeners = (() => {
+        let done = false;
+        return () => {
+            if (done) return;
+            done = true;
+            const origPushState = history.pushState.bind(history);
+            const origReplaceState = history.replaceState.bind(history);
+            history.pushState = (...a) => { origPushState(...a); updateSwitchBtn(); };
+            history.replaceState = (...a) => { origReplaceState(...a); updateSwitchBtn(); };
+            window.addEventListener("popstate", updateSwitchBtn);
+        };
+    })();
+
+    ipcRenderer.invoke("accounts:count").then((count: unknown) => {
+        const n = count as number;
+
+        if (n > 0) {
+            updateSwitchBtn();
+            setupHistoryListeners();
+        }
+
+        // Exibe o botão ao salvar a primeira sessão (conta 0 → 1)
+        ipcRenderer.on("accounts:session-saved", () => {
+            if (shouldShowSwitch()) createSwitchBtn();
+            setupHistoryListeners();
+        });
+    }).catch(() => { /* non-fatal */ });
 }, { once: true });
 
 window.addEventListener("click", function unlockAudio() {

@@ -37,7 +37,7 @@ export default defineConfig({
                     main: resolve(__dirname, "src/preload/main.ts"),
                     titlebar: resolve(__dirname, "src/preload/titlebar.ts"),
                     picker: resolve(__dirname, "src/preload/picker.ts"),
-                    "account-select": resolve(__dirname, "src/preload/account-select.ts"),
+                    "save-session": resolve(__dirname, "src/preload/save-session.ts"),
                 },
             },
         },

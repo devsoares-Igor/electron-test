@@ -1,5 +1,5 @@
-import { flipFuses, FuseVersion, FuseV1Options } from "@electron/fuses";
 import path from "path";
+import { flipFuses, FuseVersion, FuseV1Options } from "@electron/fuses";
 
 export default async function afterPack(context) {
     const { appOutDir, electronPlatformName, packager } = context;
