@@ -77,7 +77,7 @@ export function registerAccountHandlers(win: BrowserWindow, view: WebContentsVie
                     fields: [
                         "auth_token", "files_base_url", "name", "nick", "role",
                         "invite_token", "irm_servers", "ppcs_server", "room_server",
-                        "css_server", "acs_server", "webrtc_config",
+                        "css_server", "acs_server", "webrtc_config", "permissions",
                     ],
                 }, account.realm),
             ]), 15_000);
@@ -89,6 +89,14 @@ export function registerAccountHandlers(win: BrowserWindow, view: WebContentsVie
 
             userData.api_server = apiBaseUrl;
             userData.login_mode = "user";
+
+            // Garante que permissions é JSON válido para evitar crash no InviteDlg
+            if (userData.permissions !== undefined) {
+                try { JSON.parse(userData.permissions as string); }
+                catch { userData.permissions = "[]"; }
+            } else {
+                userData.permissions = "[]";
+            }
 
             // Armazena para injeção via sendSync no preload (roda antes do React)
             pendingInjection = JSON.stringify({
