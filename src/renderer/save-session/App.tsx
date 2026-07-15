@@ -1,29 +1,15 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { baseTheme, colors } from "../lib/theme";
-import { ThemeRoot, AppButton } from "../components";
-import { Box, Typography, createTheme, useMediaQuery, GlobalStyles } from "@mui/material";
-
-function buildTheme(mode: "dark" | "light") {
-    const isDark = mode === "dark";
-    return createTheme(baseTheme, {
-        palette: {
-            mode,
-            ...(isDark ? {} : {
-                background: { default: "#F8FAFC", paper: "#FFFFFF" },
-                text: { primary: "#0F172A", secondary: "#475569", disabled: "#94A3B8" },
-                divider: "rgba(0,0,0,0.08)",
-            }),
-        },
-    });
-}
+import { buildLightDarkTheme, colors } from "../lib/theme";
+import { ThemeRoot, AppButton, AppIconButton } from "../components";
+import { Box, Typography, useMediaQuery, GlobalStyles, alpha } from "@mui/material";
 
 export default function SaveSession() {
     const { t } = useTranslation();
     const api = window.accountsAPI;
     const prefersDark = useMediaQuery("(prefers-color-scheme: dark)", { noSsr: true });
     const isDark = prefersDark;
-    const theme = useMemo(() => buildTheme(isDark ? "dark" : "light"), [isDark]);
+    const theme = useMemo(() => buildLightDarkTheme(isDark ? "dark" : "light"), [isDark]);
     const [saved, setSaved] = useState(false);
 
     const handleSave = async () => {
@@ -53,24 +39,11 @@ export default function SaveSession() {
                     {/* Close */}
                     <Box sx={{ display: "flex", justifyContent: "flex-end", px: 2, pt: 1.5, WebkitAppRegion: "no-drag" } as object}>
                         {!saved && (
-                            <Box
-                                component="button"
-                                onClick={() => api.skipSave()}
-                                sx={{
-                                    width: 28, height: 28, borderRadius: "50%", border: "none",
-                                    bgcolor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)",
-                                    color: "text.secondary",
-                                    cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                                    "&:hover": {
-                                        bgcolor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.10)",
-                                        color: "text.primary",
-                                    },
-                                }}
-                            >
+                            <AppIconButton onClick={() => api.skipSave()} sx={{ width: 28, height: 28 }}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                                     <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
                                 </svg>
-                            </Box>
+                            </AppIconButton>
                         )}
                     </Box>
 
@@ -87,7 +60,7 @@ export default function SaveSession() {
                         } as object}>
                             <Box sx={{
                                 width: 68, height: 68, borderRadius: "50%",
-                                bgcolor: "rgba(16,185,129,0.12)",
+                                bgcolor: alpha(colors.green, 0.12),
                                 display: "flex", alignItems: "center", justifyContent: "center",
                                 color: colors.green,
                                 animation: "popIn 0.4s cubic-bezier(0.34,1.56,0.64,1)",
@@ -116,7 +89,7 @@ export default function SaveSession() {
                             {/* Ícone de sucesso */}
                             <Box sx={{
                                 width: 56, height: 56, borderRadius: "50%",
-                                bgcolor: `rgba(16,185,129,0.12)`,
+                                bgcolor: alpha(colors.green, 0.12),
                                 display: "flex", alignItems: "center", justifyContent: "center",
                                 color: colors.green,
                             }}>
@@ -154,11 +127,7 @@ export default function SaveSession() {
 
                             {/* Botões */}
                             <Box sx={{ display: "flex", gap: 1.5, width: "100%", mt: 0.5 }}>
-                                <AppButton fullWidth variant="outlined" size="large" onClick={() => api.skipSave()}
-                                    sx={{
-                                        borderColor: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)",
-                                        color: "text.secondary",
-                                    }}>
+                                <AppButton fullWidth variant="outlined" size="large" onClick={() => api.skipSave()}>
                                     {t("saveSession.skip")}
                                 </AppButton>
                                 <AppButton fullWidth variant="contained" size="large" onClick={handleSave}>

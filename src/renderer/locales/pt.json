@@ -5,15 +5,7 @@
     "titlebar": {
         "reload": "Recarregar (F5)",
         "switchAccount": "Trocar de conta",
-        "zoom": "Zoom",
-        "resetZoom": "Redefinir zoom",
-        "zoomIn": "Aumentar zoom",
-        "zoomOut": "Diminuir zoom",
-        "devtools": "Ferramentas do desenvolvedor",
-        "devtoolsLabel": "Senha para DevTools",
-        "placeholder": "Digite a senha...",
-        "cancel": "Cancelar",
-        "confirm": "Abrir"
+        "zoom": "Zoom"
     },
     "offline": {
         "offlineTitle": "Sem conexão com a rede",
@@ -34,7 +26,6 @@
         "savedSubtitle": "Da próxima vez, entre com um clique."
     },
     "accounts": {
-        "welcome": "Quem está usando?",
         "emptyTitle": "Bem-vindo!",
         "emptySubtitle": "Entre com sua conta para continuar.",
         "signIn": "Entrar",
@@ -46,14 +37,21 @@
         "removeAllTitle": "Remover todas as contas?",
         "removeAllDesc": "Esta ação removerá todas as contas salvas neste dispositivo.",
         "cancel": "Cancelar",
-        "savedAccounts": "Gerenciar contas salvas",
-        "savedDesc": "Estas contas estão salvas neste dispositivo.",
         "lastAccess": "Último acesso",
-        "community": "Comunidade",
         "loginError": "Não foi possível fazer login. Verifique suas credenciais.",
         "timeNow": "Agora, {{time}}",
         "timeToday": "Hoje, {{time}}",
-        "timeYesterday": "Ontem, {{time}}"
+        "timeYesterday": "Ontem, {{time}}",
+        "chooseSubtitle": "Clique em uma conta para entrar.",
+        "current": "Atual",
+        "clickToEnter": "Clique para entrar",
+        "seeMore": "Ver mais contas ({{count}})",
+        "seeLess": "Ver menos",
+        "confirmRemoveTitle": "Remover esta conta?",
+        "confirmRemoveDesc": "A conta \"{{name}}\" será removida deste dispositivo.",
+        "or": "ou",
+        "chooseTitlePart1": "Escolha",
+        "chooseTitlePart2": "uma conta"
     },
     "picker": {
         "title": "Escolha o que compartilhar",

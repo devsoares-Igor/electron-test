@@ -2,12 +2,14 @@ import {
     Tab,
     Box,
     Tabs,
+    alpha,
     Paper,
     Switch,
     Typography,
     FormControlLabel,
     CircularProgress,
 } from "@mui/material";
+import { colors } from "../lib/theme";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AppButton, ThemeRoot } from "../components";
@@ -33,13 +35,13 @@ function SourceCard({
                 cursor: "pointer",
                 border: "2px solid",
                 borderColor: selected ? "primary.main" : "transparent",
-                bgcolor: selected ? "#1a3060" : "background.paper",
+                bgcolor: selected ? alpha(colors.accent, 0.28) : "background.paper",
                 p: 0.75,
                 borderRadius: 1.5,
                 transition: "border-color 0.15s, background-color 0.15s",
                 "&:hover": {
-                    bgcolor: selected ? "#1a3060" : "#2a3844",
-                    borderColor: selected ? "primary.main" : "#3a4f63",
+                    bgcolor: selected ? alpha(colors.accent, 0.28) : colors.bg3,
+                    borderColor: selected ? "primary.main" : colors.bg4,
                 },
             }}
         >
@@ -50,7 +52,7 @@ function SourceCard({
                     width: "100%",
                     aspectRatio: "16 / 9",
                     objectFit: "contain",
-                    bgcolor: "#0a0f18",
+                    bgcolor: colors.bg,
                     borderRadius: "4px",
                     display: "block",
                 }}
@@ -130,7 +132,7 @@ export default function App() {
                         mb: 1.5,
                         pr: 0.5,
                         "&::-webkit-scrollbar": { width: "6px" },
-                        "&::-webkit-scrollbar-thumb": { bgcolor: "#3a4f63", borderRadius: "3px" },
+                        "&::-webkit-scrollbar-thumb": { bgcolor: colors.bg4, borderRadius: "3px" },
                     }}
                 >
                     {sources === null ? (
@@ -206,7 +208,7 @@ export default function App() {
                                     height="16"
                                     viewBox="0 0 24 24"
                                     fill="currentColor"
-                                    style={{ color: "#8a9db5", flexShrink: 0 }}
+                                    style={{ color: colors.text2, flexShrink: 0 }}
                                 >
                                     <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" />
                                 </svg>
@@ -225,7 +227,6 @@ export default function App() {
                         variant="outlined"
                         size="small"
                         onClick={() => window.pickerAPI.sendResult(null)}
-                        sx={{ color: "primary.main", borderColor: "divider" }}
                     >
                         {t("picker.cancel")}
                     </AppButton>

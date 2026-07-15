@@ -5,15 +5,7 @@
     "titlebar": {
         "reload": "Recargar (F5)",
         "switchAccount": "Cambiar de cuenta",
-        "zoom": "Zoom",
-        "resetZoom": "Restablecer zoom",
-        "zoomIn": "Acercar",
-        "zoomOut": "Alejar",
-        "devtools": "Herramientas de desarrollador",
-        "devtoolsLabel": "Contraseña DevTools",
-        "placeholder": "Ingresa la contraseña...",
-        "cancel": "Cancelar",
-        "confirm": "Abrir"
+        "zoom": "Zoom"
     },
     "offline": {
         "offlineTitle": "Sin conexión a internet",
@@ -34,7 +26,6 @@
         "savedSubtitle": "La próxima vez, inicia sesión con un clic."
     },
     "accounts": {
-        "welcome": "¿Quién está usando?",
         "emptyTitle": "¡Bienvenido!",
         "emptySubtitle": "Inicia sesión en tu cuenta para continuar.",
         "signIn": "Iniciar sesión",
@@ -46,14 +37,21 @@
         "removeAllTitle": "¿Eliminar todas las cuentas?",
         "removeAllDesc": "Esto eliminará todas las cuentas guardadas en este dispositivo.",
         "cancel": "Cancelar",
-        "savedAccounts": "Administrar cuentas guardadas",
-        "savedDesc": "Estas cuentas están guardadas en este dispositivo.",
         "lastAccess": "Último acceso",
-        "community": "Comunidad",
         "loginError": "No se pudo iniciar sesión. Verifica tus credenciales.",
         "timeNow": "Ahora, {{time}}",
         "timeToday": "Hoy, {{time}}",
-        "timeYesterday": "Ayer, {{time}}"
+        "timeYesterday": "Ayer, {{time}}",
+        "chooseSubtitle": "Haz clic en una cuenta para iniciar sesión.",
+        "current": "Actual",
+        "clickToEnter": "Clic para entrar",
+        "seeMore": "Ver más cuentas ({{count}})",
+        "seeLess": "Ver menos",
+        "confirmRemoveTitle": "¿Eliminar esta cuenta?",
+        "confirmRemoveDesc": "La cuenta \"{{name}}\" será eliminada de este dispositivo.",
+        "or": "o",
+        "chooseTitlePart1": "Elige",
+        "chooseTitlePart2": "una cuenta"
     },
     "picker": {
         "title": "Elige qué compartir",

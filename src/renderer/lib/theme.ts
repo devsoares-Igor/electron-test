@@ -51,8 +51,30 @@ export const baseTheme = createTheme({
         },
         MuiButton: {
             styleOverrides: {
-                root: { textTransform: "none", fontWeight: 600, borderRadius: 10 },
-                contained: { boxShadow: "none", "&:hover": { boxShadow: "none" } },
+                root: {
+                    textTransform: "none",
+                    fontWeight: 500,
+                    borderRadius: 8,
+                    fontSize: "0.8125rem", // 13px
+                    letterSpacing: "0.01em",
+                },
+                contained: {
+                    fontWeight: 600,
+                    boxShadow: "none",
+                    "&:hover": { boxShadow: "none" },
+                },
+                outlined: {
+                    borderColor: "rgba(255,255,255,0.15)",
+                    "&:hover": {
+                        borderColor: colors.accentL,
+                        backgroundColor: "rgba(29,78,216,0.06)",
+                    },
+                },
+                text: {
+                    "&:hover": {
+                        backgroundColor: "rgba(255,255,255,0.05)",
+                    },
+                },
             },
         },
         MuiDialog: {
@@ -77,3 +99,45 @@ export const baseTheme = createTheme({
         },
     },
 });
+
+/**
+ * Estende o baseTheme com suporte a light/dark mode.
+ * Usado por renderers que suportam os dois modos (account-select, save-session).
+ */
+export function buildLightDarkTheme(mode: "dark" | "light") {
+    const isDark = mode === "dark";
+    return createTheme(baseTheme, {
+        palette: {
+            mode,
+            ...(isDark ? {} : {
+                background: { default: "#EEF2F7", paper: "#FFFFFF" },
+                text: { primary: "#0F172A", secondary: "#475569", disabled: "#94A3B8" },
+                divider: "rgba(0,0,0,0.08)",
+            }),
+        },
+        ...(isDark ? {} : {
+            components: {
+                MuiButton: {
+                    styleOverrides: {
+                        outlined: { borderColor: "rgba(0,0,0,0.20)" },
+                    },
+                },
+                MuiPaper: {
+                    styleOverrides: {
+                        root: { backgroundImage: "none", border: "1px solid rgba(0,0,0,0.08)" },
+                    },
+                },
+                MuiInputBase: {
+                    styleOverrides: {
+                        root: { backgroundColor: "rgba(0,0,0,0.05)" },
+                    },
+                },
+                MuiOutlinedInput: {
+                    styleOverrides: {
+                        notchedOutline: { borderColor: "rgba(0,0,0,0.20)" },
+                    },
+                },
+            },
+        }),
+    });
+}

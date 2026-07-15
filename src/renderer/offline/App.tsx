@@ -1,5 +1,6 @@
+import { colors } from "../lib/theme";
 import { useTranslation } from "react-i18next";
-import { Box, Paper, Typography } from "@mui/material";
+import { Box, Paper, Typography, alpha } from "@mui/material";
 import { AppButton, AppIcon, ThemeRoot } from "../components";
 
 export default function Offline() {
@@ -22,7 +23,7 @@ export default function Offline() {
                             width: 72,
                             height: 72,
                             borderRadius: "50%",
-                            bgcolor: "rgba(88,101,242,0.12)",
+                            bgcolor: alpha(colors.accent, 0.12),
                             mb: 3,
                             color: "primary.main",
                         }}
@@ -38,7 +39,7 @@ export default function Offline() {
                     <AppButton onClick={() => window.electronAPI?.retry()} sx={{ px: 3 }}>
                         {t("offline.retry")}
                     </AppButton>
-                    <Box sx={{ borderTop: "1px solid rgba(255,255,255,0.08)", mt: 4, pt: 2.5 }}>
+                    <Box sx={{ borderTop: `1px solid ${alpha(colors.text, 0.08)}`, mt: 4, pt: 2.5 }}>
                         <Typography variant="caption" color="text.disabled">
                             {t(isDev ? "offline.devCaption" : "offline.offlineCaption")}
                         </Typography>

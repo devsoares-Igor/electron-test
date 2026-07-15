@@ -3,28 +3,34 @@ import {
     Tooltip,
     Typography,
     createTheme,
+    alpha,
+    useMediaQuery,
 } from "@mui/material";
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { baseTheme, colors } from "../lib/theme";
+import { useEffect, useMemo, useState } from "react";
+import { buildLightDarkTheme, colors } from "../lib/theme";
 import { AppIcon, AppIconButton, ThemeRoot } from "../components";
-
-const theme = createTheme(baseTheme, {
-    palette: { background: { default: colors.bg2, paper: colors.bg2 } },
-});
-
-const BTN_SX = {
-    width: 28,
-    height: 28,
-    color: "#94A3B8",
-    borderRadius: "4px",
-    "&:hover": { bgcolor: "rgba(255,255,255,0.08)", color: "#F1F5F9" },
-    "&:active": { bgcolor: "rgba(255,255,255,0.14)" },
-} as const;
 
 export default function Titlebar() {
     const { t } = useTranslation();
     const [spinning, setSpinning] = useState(false);
+    const isDark = useMediaQuery("(prefers-color-scheme: dark)", { noSsr: true });
+
+    const theme = useMemo(() => createTheme(
+        buildLightDarkTheme(isDark ? "dark" : "light"),
+        { palette: { background: { default: isDark ? colors.bg2 : "#FFFFFF", paper: isDark ? colors.bg2 : "#FFFFFF" } } }
+    ), [isDark]);
+
+    const btnColor = isDark ? colors.text2 : "#64748B";
+    const btnHoverBg = isDark ? alpha(colors.text, 0.10) : "rgba(0,0,0,0.06)";
+    const btnHoverColor = isDark ? colors.text : "#0F172A";
+    const btnActiveBg = isDark ? alpha(colors.text, 0.16) : "rgba(0,0,0,0.10)";
+    const BTN_SX = {
+        width: 32, height: 32, color: btnColor, borderRadius: "6px", flexShrink: 0,
+        "&:hover": { bgcolor: btnHoverBg, color: btnHoverColor },
+        "&:active": { bgcolor: btnActiveBg },
+        "&:focus-visible": { boxShadow: `0 0 0 2px ${alpha(colors.accentL, 0.6)}` },
+    } as const;
 
     const handleReload = () => {
         setSpinning(true);
@@ -43,7 +49,7 @@ export default function Titlebar() {
             <Box
                 sx={{
                     height: "100%",
-                    bgcolor: "#1E293B",
+                    bgcolor: isDark ? colors.bg2 : "#FFFFFF",
                     WebkitAppRegion: "drag",
                     display: "flex",
                     alignItems: "center",
@@ -52,23 +58,25 @@ export default function Titlebar() {
                 } as object}
             >
                 {/* Esquerda: ⋮ menu */}
-                <AppIconButton
-                    onClick={() => window.titlebarAPI.showMenu()}
-                    sx={{ ...BTN_SX, WebkitAppRegion: "no-drag" } as object}
-                    aria-label="Menu"
-                >
-                    <Typography sx={{ fontSize: 16, lineHeight: 1, color: "inherit", letterSpacing: "1px" }}>⋮</Typography>
-                </AppIconButton>
+                <Tooltip title="Menu" placement="bottom">
+                    <AppIconButton
+                        onClick={() => window.titlebarAPI.showMenu()}
+                        sx={{ ...BTN_SX, WebkitAppRegion: "no-drag" } as object}
+                        aria-label="Menu"
+                    >
+                        <Typography sx={{ fontSize: 18, lineHeight: 1, color: "inherit", letterSpacing: "1px", fontWeight: 700 }}>⋮</Typography>
+                    </AppIconButton>
+                </Tooltip>
 
                 {/* Direita: reload */}
                 <Box sx={{ ml: "auto", WebkitAppRegion: "no-drag" } as object}>
                     <Tooltip title={t("titlebar.reload")} placement="bottom">
-                        <AppIconButton onClick={handleReload} sx={BTN_SX}>
+                        <AppIconButton onClick={handleReload} sx={BTN_SX} aria-label={t("titlebar.reload")}>
                             <AppIcon
                                 name="reload"
                                 sx={{
-                                    width: 15,
-                                    height: 15,
+                                    width: 16,
+                                    height: 16,
                                     transition: "transform 0.5s linear",
                                     transform: spinning ? "rotate(360deg)" : "none",
                                 }}

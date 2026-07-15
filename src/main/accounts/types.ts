@@ -1,12 +1,5 @@
-export interface SavedAccount {
-    id: string;
-    realm: string;
-    nick: string;
-    name: string;
-    apiBaseUrl: string;
-    lastAccess: string; // ISO 8601
-    avatarColor: string;
-}
+// SavedAccount é definida em shared/types/ipc.ts (fonte única) e re-exportada aqui
+export type { SavedAccount } from "../../shared/types/ipc";
 
 export interface PendingSession {
     nick: string;

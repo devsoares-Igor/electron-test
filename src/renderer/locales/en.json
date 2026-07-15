@@ -5,15 +5,7 @@
     "titlebar": {
         "reload": "Reload (F5)",
         "switchAccount": "Switch account",
-        "zoom": "Zoom",
-        "resetZoom": "Reset zoom",
-        "zoomIn": "Zoom in",
-        "zoomOut": "Zoom out",
-        "devtools": "Developer tools",
-        "devtoolsLabel": "DevTools password",
-        "placeholder": "Enter password...",
-        "cancel": "Cancel",
-        "confirm": "Open"
+        "zoom": "Zoom"
     },
     "offline": {
         "offlineTitle": "No internet connection",
@@ -34,7 +26,6 @@
         "savedSubtitle": "Next time, sign in with one click."
     },
     "accounts": {
-        "welcome": "Who's watching?",
         "emptyTitle": "Welcome!",
         "emptySubtitle": "Sign in to your account to continue.",
         "signIn": "Sign in",
@@ -46,14 +37,21 @@
         "removeAllTitle": "Remove all accounts?",
         "removeAllDesc": "This will remove all saved accounts from this device.",
         "cancel": "Cancel",
-        "savedAccounts": "Manage saved accounts",
-        "savedDesc": "These accounts are saved on this device.",
         "lastAccess": "Last access",
-        "community": "Community",
         "loginError": "Could not sign in. Please check your credentials.",
         "timeNow": "Now, {{time}}",
         "timeToday": "Today, {{time}}",
-        "timeYesterday": "Yesterday, {{time}}"
+        "timeYesterday": "Yesterday, {{time}}",
+        "chooseSubtitle": "Click on an account to sign in.",
+        "current": "Current",
+        "clickToEnter": "Click to sign in",
+        "seeMore": "See more accounts ({{count}})",
+        "seeLess": "See less",
+        "confirmRemoveTitle": "Remove this account?",
+        "confirmRemoveDesc": "The account \"{{name}}\" will be removed from this device.",
+        "or": "or",
+        "chooseTitlePart1": "Choose",
+        "chooseTitlePart2": "an account"
     },
     "picker": {
         "title": "Choose what to share",

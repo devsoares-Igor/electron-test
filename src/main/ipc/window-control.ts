@@ -60,28 +60,4 @@ export function registerWindowControlHandlers(win: BrowserWindow, view: WebConte
             menuPopup = null;
         });
     });
-
-    ipcMain.removeAllListeners("show-devtools-dialog");
-    ipcMain.on("show-devtools-dialog", async () => {
-        const locale = await resolveWebLocale(view);
-        const dialog = new BrowserWindow({
-            width: 280,
-            height: 148,
-            parent: win,
-            modal: false,
-            resizable: false,
-            minimizable: false,
-            maximizable: false,
-            frame: false,
-            alwaysOnTop: true,
-            skipTaskbar: true,
-            webPreferences: {
-                nodeIntegration: false,
-                contextIsolation: true,
-                preload: path.join(__dirname, "..", "preload", "titlebar.js"),
-            },
-        });
-        dialog.setMenu(null);
-        dialog.loadFile(path.join(__dirname, "..", "renderer", "devtools-dialog", "index.html"), { query: { locale } });
-    });
 }

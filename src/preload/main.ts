@@ -52,6 +52,58 @@ if (window.location.protocol === "file:" && typeof __ELECTRON_SOURCE_HOST__ !== 
     } catch { /* storage blocked */ }
 }
 
+// ─── Design System CSS injection (Discord/Slack pattern) ─────────────────────
+// Injeta tokens, scrollbar e estilos globais no webapp carregado no Electron.
+// Não sobrescreve estilos do webapp — apenas define :root vars e pseudoelementos.
+function injectDesignSystemCss(): void {
+    if (document.getElementById("__realms_ds__")) return;
+    const style = document.createElement("style");
+    style.id = "__realms_ds__";
+    style.textContent = [
+        /* CSS custom properties — disponíveis globalmente no webapp */
+        ":root{",
+        "  --realms-bg:#0F172A;",
+        "  --realms-bg2:#1E293B;",
+        "  --realms-bg3:#334155;",
+        "  --realms-accent:#1D4ED8;",
+        "  --realms-accent-l:#60A5FA;",
+        "  --realms-green:#10B981;",
+        "  --realms-text:#F1F5F9;",
+        "  --realms-text2:#94A3B8;",
+        "  --realms-font:'Inter',system-ui,-apple-system,sans-serif;",
+        "  --realms-radius:8px;",
+        "}",
+        /* Scrollbar — tênue, discreta, combina com o design system */
+        "::-webkit-scrollbar{width:6px;height:6px}",
+        "::-webkit-scrollbar-track{background:transparent}",
+        "::-webkit-scrollbar-thumb{background:rgba(148,163,184,0.22);border-radius:3px}",
+        "::-webkit-scrollbar-thumb:hover{background:rgba(148,163,184,0.42)}",
+        "::-webkit-scrollbar-corner{background:transparent}",
+        /* Seleção de texto — azul do accent */
+        "::selection{background:rgba(29,78,216,0.28)}",
+        /* Font smoothing — renderização mais nítida (padrão macOS/Chrome) */
+        "*,*::before,*::after{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}",
+        /* Separador titlebar → webapp: gradient shadow no topo do webapp (injetado aqui pois titlebar e webapp são janelas Electron separadas) */
+        "body::before{",
+        "  content:'';",
+        "  position:fixed;top:0;left:0;right:0;",
+        "  height:10px;",
+        "  background:linear-gradient(to bottom,rgba(0,0,0,0.07) 0%,transparent 100%);",
+        "  backdrop-filter:blur(0px);",
+        "  z-index:2147483646;pointer-events:none;",
+        "}",
+        "@media(prefers-color-scheme:dark){body::before{background:linear-gradient(to bottom,rgba(0,0,0,0.28) 0%,transparent 100%)}}",
+    ].join("");
+    (document.head ?? document.documentElement).appendChild(style);
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", injectDesignSystemCss, { once: true });
+} else {
+    injectDesignSystemCss();
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 // ─── Intercept POST /device (fetch + XHR/axios) ───────────────────────────────
 
 function notifyLoginSuccess(url: string, reqBody: Record<string, unknown>, resBody: Record<string, unknown>): void {
@@ -145,26 +197,43 @@ window.addEventListener("DOMContentLoaded", () => {
         const btn = document.createElement("button");
         btn.id = "__realms_switch_account__";
         btn.innerHTML = `
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;opacity:0.85">
                 <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
             </svg>
             <span>${switchLabel}</span>
         `;
         Object.assign(btn.style, {
-            position: "fixed", bottom: "auto", top: "8px", left: "16px", right: "auto",
-            zIndex: "2147483647", display: "flex", alignItems: "center", gap: "8px",
-            padding: "8px 16px",
-            background: "rgba(30,41,59,0.96)", color: "#94A3B8",
-            border: "1px solid rgba(255,255,255,0.07)", borderRadius: "10px",
-            fontSize: "13px", fontFamily: "'Inter', system-ui, sans-serif",
-            fontWeight: "500", cursor: "pointer",
-            backdropFilter: "blur(12px)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
-            transition: "background 0.15s, color 0.15s, transform 0.1s", outline: "none",
+            position: "fixed", top: "8px", left: "16px",
+            zIndex: "2147483647", display: "flex", alignItems: "center", gap: "7px",
+            padding: "7px 14px",
+            background: "rgba(15,23,42,0.92)",
+            color: "#94A3B8",
+            border: "1px solid rgba(255,255,255,0.10)",
+            borderRadius: "8px",
+            fontSize: "13px",
+            fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+            fontWeight: "500",
+            letterSpacing: "0.01em",
+            cursor: "pointer",
+            backdropFilter: "blur(16px)",
+            boxShadow: "0 2px 12px rgba(0,0,0,0.4)",
+            transition: "background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s",
+            outline: "none",
+            userSelect: "none",
         });
-        btn.addEventListener("mouseenter", () => { btn.style.background = "rgba(51,65,85,0.98)"; btn.style.color = "#F1F5F9"; btn.style.transform = "translateY(-1px)"; });
-        btn.addEventListener("mouseleave", () => { btn.style.background = "rgba(30,41,59,0.96)"; btn.style.color = "#94A3B8"; btn.style.transform = "translateY(0)"; });
+        btn.addEventListener("mouseenter", () => {
+            btn.style.background = "rgba(29,78,216,0.18)";
+            btn.style.color = "#60A5FA";
+            btn.style.borderColor = "rgba(96,165,250,0.35)";
+            btn.style.transform = "translateY(-1px)";
+        });
+        btn.addEventListener("mouseleave", () => {
+            btn.style.background = "rgba(15,23,42,0.92)";
+            btn.style.color = "#94A3B8";
+            btn.style.borderColor = "rgba(255,255,255,0.10)";
+            btn.style.transform = "translateY(0)";
+        });
         btn.addEventListener("click", () => {
-            // Barra de loading enquanto a tela de contas carrega
             const style = document.createElement("style");
             style.textContent = "@keyframes __realms_slide{0%{background-position:200% 0}100%{background-position:-200% 0}}";
             document.head.appendChild(style);

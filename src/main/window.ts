@@ -2,9 +2,18 @@ import path from "path";
 import { resolveLocale } from "./locale";
 import { APP_HOST, APP_URL, IS_LOCAL } from "./config";
 import { SessionManager } from "./accounts/SessionManager";
-import { BrowserWindow, ipcMain, shell, WebContentsView } from "electron";
+import { BrowserWindow, ipcMain, shell, WebContentsView, nativeTheme } from "electron";
 
 const TB_HEIGHT = 32;
+
+/** Cores do overlay nativo (botões −□×) adaptadas ao tema do sistema */
+function overlayColors(isDark: boolean) {
+    return {
+        color: isDark ? "#1E293B" : "#FFFFFF",
+        symbolColor: isDark ? "#94A3B8" : "#64748B",
+        height: TB_HEIGHT,
+    };
+}
 
 const ALLOWED_PERMISSIONS = [
     "media",
@@ -74,8 +83,8 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
         icon: iconPath,
         show: false,
         titleBarStyle: "hidden",
-        backgroundColor: "#1E293B",
-        titleBarOverlay: { color: "#1E293B", symbolColor: "#94A3B8", height: TB_HEIGHT },
+        backgroundColor: nativeTheme.shouldUseDarkColors ? "#1E293B" : "#FFFFFF",
+        titleBarOverlay: overlayColors(nativeTheme.shouldUseDarkColors),
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
@@ -84,6 +93,19 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
     });
     win.setMenu(null);
     win.loadFile(path.join(__dirname, "..", "renderer", "titlebar", "index.html"), { query: { locale } });
+
+    // Atualiza botões −□× quando o sistema muda de tema
+    const onNativeThemeUpdate = () => {
+        if (win.isDestroyed()) return;
+        const isDark = nativeTheme.shouldUseDarkColors;
+        win.setTitleBarOverlay(overlayColors(isDark));
+        win.setBackgroundColor(isDark ? "#1E293B" : "#FFFFFF");
+    };
+    nativeTheme.on("updated", onNativeThemeUpdate);
+    win.on("closed", () => {
+        nativeTheme.removeListener("updated", onNativeThemeUpdate);
+        win.removeListener("resize", updateBounds);
+    });
 
     // WebContentsView — app content below the titlebar
     const view = new WebContentsView({

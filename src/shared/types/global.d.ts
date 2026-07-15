@@ -1,5 +1,5 @@
-import type { PickerResult, SourceData } from "./ipc";
-import type { SavedAccount, AutoLoginResult, PendingSession } from "../../main/accounts/types";
+import type { PickerResult, SourceData, SavedAccount } from "./ipc";
+import type { AutoLoginResult, PendingSession } from "../../main/accounts/types";
 
 declare module "react" {
     interface CSSProperties {
