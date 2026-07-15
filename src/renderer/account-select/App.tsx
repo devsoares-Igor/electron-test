@@ -246,6 +246,12 @@ export default function AccountSelect() {
     const [confirmAll, setConfirmAll] = useState(false);
     const [confirmRemove, setConfirmRemove] = useState<SavedAccount | null>(null);
     const [expanded, setExpanded] = useState(false);
+    const [exiting, setExiting] = useState(false);
+
+    const navigateAway = (fn: () => void) => {
+        setExiting(true);
+        setTimeout(fn, 220);
+    };
 
     useEffect(() => {
         window.accountsAPI.list()
@@ -260,7 +266,7 @@ export default function AccountSelect() {
         try {
             const result = await window.accountsAPI.login(id) as { success: boolean; error?: string };
             if (result.success) {
-                window.accountsAPI.loadApp();
+                navigateAway(() => window.accountsAPI.loadApp());
             } else {
                 setLoading(null);
                 setError(result.error ?? t("accounts.loginError"));
@@ -284,8 +290,8 @@ export default function AccountSelect() {
     };
 
     const enterOtherAccount = () => {
-        if (window.accountsAPI.loadFresh) window.accountsAPI.loadFresh();
-        else window.accountsAPI.loadApp();
+        const fn = window.accountsAPI.loadFresh ?? window.accountsAPI.loadApp;
+        navigateAway(() => fn());
     };
 
     // Breakpoints para colunas responsivas
@@ -347,8 +353,9 @@ export default function AccountSelect() {
             <Box sx={{
                 height: "100vh", display: "flex", flexDirection: "column",
                 bgcolor: "background.default", overflow: "hidden",
-                animation: "acctFadeIn 0.18s ease-out",
+                animation: exiting ? "acctFadeOut 0.2s ease-in forwards" : "acctFadeIn 0.18s ease-out",
                 "@keyframes acctFadeIn": { from: { opacity: 0 }, to: { opacity: 1 } },
+                "@keyframes acctFadeOut": { from: { opacity: 1 }, to: { opacity: 0 } },
             } as object}>
 
                 {emptyState ? (

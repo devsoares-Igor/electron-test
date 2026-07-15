@@ -163,7 +163,7 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
             }
             const { pathname } = new URL(url);
             if ((pathname === "/login" || pathname === "/login/") && SessionManager.count() > 0) {
-                setTimeout(loadAccountSelect, 400);
+                setTimeout(loadAccountSelect, 150);
             }
         } catch { }
     });
