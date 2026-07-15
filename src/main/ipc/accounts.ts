@@ -1,7 +1,7 @@
 import path from "path";
 import * as https from "https";
 import { APP_URL } from "../config";
-import { resolveLocale } from "../locale";
+import { resolveWebLocale } from "../locale";
 import { SessionManager } from "../accounts/SessionManager";
 import { resolveApiBaseUrl } from "../accounts/RealmResolver";
 import { BrowserWindow, ipcMain, WebContentsView } from "electron";
@@ -115,11 +115,11 @@ export function registerAccountHandlers(win: BrowserWindow, view: WebContentsVie
         if (existing) { SessionManager.updateLastAccess(existing.id); return; }
 
         pendingSession = session;
-        openSaveSessionDialog(win);
+        openSaveSessionDialog(win, view);
     });
 }
 
-function openSaveSessionDialog(win: BrowserWindow): void {
+function openSaveSessionDialog(win: BrowserWindow, view: WebContentsView): void {
     if (saveSessionWin && !saveSessionWin.isDestroyed()) return;
 
     const { x, y, width, height } = win.getBounds();
@@ -144,8 +144,13 @@ function openSaveSessionDialog(win: BrowserWindow): void {
         },
     });
     saveSessionWin.setMenu(null);
-    saveSessionWin.loadFile(
-        path.join(__dirname, "..", "renderer", "save-session", "index.html"), { query: { locale: resolveLocale() } },);
+    resolveWebLocale(view).then(locale => {
+        if (!saveSessionWin || saveSessionWin.isDestroyed()) return;
+        saveSessionWin.loadFile(
+            path.join(__dirname, "..", "renderer", "save-session", "index.html"),
+            { query: { locale } },
+        );
+    });
     saveSessionWin.on("closed", () => { saveSessionWin = null; });
 }
 

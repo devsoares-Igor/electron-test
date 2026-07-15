@@ -9,23 +9,32 @@ const LOCALE_MAP: Record<string, Locale> = {
     es: "es",
 };
 
-/** Locale do SO — fallback */
+/** Locale detectado pelo OS — usado como fallback */
 export function resolveLocale(): Locale {
     const raw = app.getLocale().split("-")[0].toLowerCase();
     return LOCALE_MAP[raw] ?? "en";
 }
 
-/** Lê o idioma escolhido pelo usuário dentro da web app (localStorage.i18nextLng).
- *  Se não disponível, cai no locale do SO. */
+/** Cache do locale da web app — atualizado por resolveWebLocale() a cada navegação */
+let _cachedWebLocale: Locale | null = null;
+
+export function getCachedWebLocale(): Locale {
+    return _cachedWebLocale ?? resolveLocale();
+}
+
+/** Lê localStorage.i18nextLng da web app e atualiza o cache interno */
 export async function resolveWebLocale(view: WebContentsView): Promise<Locale> {
     try {
         const raw: string = await view.webContents.executeJavaScript(
             "localStorage.getItem('i18nextLng') || ''",
         );
-        // i18nextLng pode ser "pt-BR", "en-US", "es-419", etc.
+        // raw vazio = página file:// sem i18n (account-select, offline, etc.) → usa cache
+        if (!raw) return getCachedWebLocale();
         const prefix = raw.split("-")[0].toLowerCase();
-        return LOCALE_MAP[prefix] ?? resolveLocale();
+        const resolved = LOCALE_MAP[prefix] ?? resolveLocale();
+        _cachedWebLocale = resolved;
+        return resolved;
     } catch {
-        return resolveLocale();
+        return getCachedWebLocale();
     }
 }

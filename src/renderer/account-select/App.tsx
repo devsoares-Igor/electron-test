@@ -12,7 +12,6 @@ import {
     useMediaQuery,
     DialogActions,
     DialogContent,
-    LinearProgress,
     CircularProgress,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
@@ -341,17 +340,16 @@ export default function AccountSelect() {
                 },
             }} />
 
-            {/* Barra de progresso */}
-            {loading && (
-                <LinearProgress sx={{
-                    position: "fixed", top: 0, left: 0, right: 0, zIndex: 9999,
-                    height: 3, bgcolor: "transparent",
-                    "& .MuiLinearProgress-bar": { bgcolor: colors.accentL },
-                }} />
-            )}
+            {/* Barra de loading via classe CSS pré-injetada pelo preload — nunca congela no primeiro render */}
+            {loading && <div className="__realms_loading_bar" />}
 
             {/* ── Layout: coluna com area scrollavel + barra fixa ── */}
-            <Box sx={{ height: "100vh", display: "flex", flexDirection: "column", bgcolor: "background.default", overflow: "hidden" }}>
+            <Box sx={{
+                height: "100vh", display: "flex", flexDirection: "column",
+                bgcolor: "background.default", overflow: "hidden",
+                animation: "acctFadeIn 0.18s ease-out",
+                "@keyframes acctFadeIn": { from: { opacity: 0 }, to: { opacity: 1 } },
+            } as object}>
 
                 {emptyState ? (
                     /* Estado vazio: centralizado */

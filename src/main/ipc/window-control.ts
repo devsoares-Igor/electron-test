@@ -1,6 +1,6 @@
 import path from "path";
 import { reloadApp } from "../window";
-import { resolveWebLocale } from "../locale";
+import { resolveWebLocale, getCachedWebLocale } from "../locale";
 import { BrowserWindow, ipcMain, WebContentsView } from "electron";
 
 export function registerWindowControlHandlers(win: BrowserWindow, view: WebContentsView): void {
@@ -29,7 +29,8 @@ export function registerWindowControlHandlers(win: BrowserWindow, view: WebConte
             return;
         }
 
-        const locale = await resolveWebLocale(view);
+        // Usa o cache do locale da webapp; tenta atualizar via resolveWebLocale mas não bloqueia
+        const locale = await resolveWebLocale(view).catch(() => getCachedWebLocale());
         const { x, y } = win.getBounds();
         menuPopup = new BrowserWindow({
             width: 370,

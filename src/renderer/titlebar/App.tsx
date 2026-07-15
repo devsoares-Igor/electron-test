@@ -1,19 +1,18 @@
 import {
     Box,
+    alpha,
     Tooltip,
     Typography,
     createTheme,
-    alpha,
     useMediaQuery,
 } from "@mui/material";
+import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useEffect, useMemo, useState } from "react";
 import { buildLightDarkTheme, colors } from "../lib/theme";
 import { AppIcon, AppIconButton, ThemeRoot } from "../components";
 
 export default function Titlebar() {
     const { t } = useTranslation();
-    const [spinning, setSpinning] = useState(false);
     const isDark = useMediaQuery("(prefers-color-scheme: dark)", { noSsr: true });
 
     const theme = useMemo(() => createTheme(
@@ -33,9 +32,7 @@ export default function Titlebar() {
     } as const;
 
     const handleReload = () => {
-        setSpinning(true);
         window.titlebarAPI.reload();
-        setTimeout(() => setSpinning(false), 500);
     };
 
     useEffect(() => {
@@ -72,15 +69,7 @@ export default function Titlebar() {
                 <Box sx={{ ml: "auto", WebkitAppRegion: "no-drag" } as object}>
                     <Tooltip title={t("titlebar.reload")} placement="bottom">
                         <AppIconButton onClick={handleReload} sx={BTN_SX} aria-label={t("titlebar.reload")}>
-                            <AppIcon
-                                name="reload"
-                                sx={{
-                                    width: 16,
-                                    height: 16,
-                                    transition: "transform 0.5s linear",
-                                    transform: spinning ? "rotate(360deg)" : "none",
-                                }}
-                            />
+                            <AppIcon name="reload" sx={{ width: 16, height: 16 }} />
                         </AppIconButton>
                     </Tooltip>
                 </Box>

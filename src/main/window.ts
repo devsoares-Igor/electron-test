@@ -1,7 +1,7 @@
 import path from "path";
-import { resolveLocale } from "./locale";
 import { APP_HOST, APP_URL, IS_LOCAL } from "./config";
 import { SessionManager } from "./accounts/SessionManager";
+import { resolveLocale, resolveWebLocale, getCachedWebLocale } from "./locale";
 import { BrowserWindow, ipcMain, shell, WebContentsView, nativeTheme } from "electron";
 
 const TB_HEIGHT = 32;
@@ -140,9 +140,11 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
     view.webContents.session.disableNetworkEmulation();
 
     const loadAccountSelect = () => {
+        const l = getCachedWebLocale();
+        view.setBackgroundColor(nativeTheme.shouldUseDarkColors ? "#0F172A" : "#EEF2F7");
         view.webContents.loadFile(
             path.join(__dirname, "..", "renderer", "account-select", "index.html"),
-            { query: { locale } },
+            { query: { locale: l } },
         );
     };
 
@@ -151,20 +153,19 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
         view.webContents.loadURL(APP_URL);
     };
 
-    // accounts:load-app → carrega o app dentro da view
     ipcMain.on("accounts:load-app", loadApp);
-    // accounts:show-select → volta para tela de contas (chamado pelo menu ⋮)
     ipcMain.on("accounts:show-select", loadAccountSelect);
 
-    // Detecta logout → volta para account-select
     view.webContents.on("did-navigate", (_e, url) => {
         try {
+            if (!url.includes("offline.html") && !url.startsWith("file://")) {
+                resolveWebLocale(view).catch(() => { });
+            }
             const { pathname } = new URL(url);
-            const isLoginPage = pathname === "/login" || pathname === "/login/";
-            if (isLoginPage && SessionManager.count() > 0) {
+            if ((pathname === "/login" || pathname === "/login/") && SessionManager.count() > 0) {
                 setTimeout(loadAccountSelect, 400);
             }
-        } catch { /* ignore */ }
+        } catch { }
     });
 
     // Startup

@@ -1,4 +1,7 @@
 import { ipcRenderer } from "electron";
+import ptLocale from "../renderer/locales/pt.json";
+import enLocale from "../renderer/locales/en.json";
+import esLocale from "../renderer/locales/es.json";
 import { createDShowStream, DSHOW_DEVICE_PREFIX, scheduleCaptureTeardown, stopCaptureImmediate } from "./dshow-stream";
 
 declare const __ELECTRON_SOURCE_HOST__: string;
@@ -83,6 +86,14 @@ function injectDesignSystemCss(): void {
         "::selection{background:rgba(29,78,216,0.28)}",
         /* Font smoothing — renderização mais nítida (padrão macOS/Chrome) */
         "*,*::before,*::after{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}",
+        /* Barra de loading pré-injetada (disponível ANTES do React carregar) */
+        /* Usada pelo account-select via classe CSS — nunca congela no primeiro render */
+        "@keyframes __rbar1{0%{left:-35%;right:100%}60%,100%{left:100%;right:-90%}}",
+        "@keyframes __rbar2{0%{left:-200%;right:100%}60%,100%{left:107%;right:-8%}}",
+        ".__realms_loading_bar{position:fixed;top:0;left:0;right:0;height:3px;z-index:9999;overflow:hidden;background:rgba(29,78,216,0.12);pointer-events:none}",
+        ".__realms_loading_bar::before,.__realms_loading_bar::after{content:'';position:absolute;top:0;bottom:0;background:linear-gradient(90deg,#1D4ED8,#60A5FA)}",
+        ".__realms_loading_bar::before{animation:__rbar1 2.1s cubic-bezier(.65,.815,.735,.395) infinite}",
+        ".__realms_loading_bar::after{animation:__rbar2 2.1s cubic-bezier(.165,.84,.44,1) 1.15s infinite}",
         /* Separador titlebar → webapp: gradient shadow no topo do webapp (injetado aqui pois titlebar e webapp são janelas Electron separadas) */
         "body::before{",
         "  content:'';",
@@ -188,9 +199,10 @@ window.addEventListener("DOMContentLoaded", () => {
     const SWITCH_ROUTES = new Set(["/", "/login"]);
     const shouldShowSwitch = () => SWITCH_ROUTES.has(window.location.pathname.replace(/\/$/, "") || "/");
 
-    // Label localizado (mesmo mapeamento de src/main/locale.ts)
-    const _lang = navigator.language.split("-")[0].toLowerCase();
-    const switchLabel = ({ pt: "Trocar de conta", es: "Cambiar de cuenta" } as Record<string, string>)[_lang] ?? "Switch account";
+    // Label do botão — lido dos mesmos arquivos de locale usados pelos renderers React
+    const _locales: Record<string, typeof enLocale> = { pt: ptLocale, en: enLocale, es: esLocale };
+    const _rawLang = (localStorage.getItem("i18nextLng") || navigator.language).split("-")[0].toLowerCase();
+    const switchLabel = (_locales[_rawLang] ?? enLocale).titlebar.switchAccount;
 
     const createSwitchBtn = () => {
         if (document.getElementById("__realms_switch_account__")) return;
@@ -198,7 +210,7 @@ window.addEventListener("DOMContentLoaded", () => {
         btn.id = "__realms_switch_account__";
         btn.innerHTML = `
             <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;opacity:0.85">
-                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                <path d="M12 12.75c1.63 0 3.07.39 4.24.9 1.08.48 1.76 1.56 1.76 2.73V18H6v-1.61c0-1.18.68-2.26 1.76-2.73 1.17-.52 2.61-.91 4.24-.91zM4 13c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm1.13 1.1c-.37-.06-.74-.1-1.13-.1-.99 0-1.93.21-2.78.58C.48 14.9 0 15.62 0 16.43V18h4.5v-1.61c0-.83.23-1.61.63-2.29zM20 13c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm4 3.43c0-.81-.48-1.53-1.22-1.85C21.93 14.21 20.99 14 20 14c-.39 0-.76.04-1.13.1.4.68.63 1.46.63 2.29V18H24v-1.57zM12 6c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3z"/>
             </svg>
             <span>${switchLabel}</span>
         `;
