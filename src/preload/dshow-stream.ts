@@ -19,14 +19,12 @@ let currentDevice: string | null = null;
 let nextStartTime = 0;
 let audioReadyPromise: Promise<void> | null = null;
 let keepAliveTimer: ReturnType<typeof setTimeout> | null = null;
-let switchTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Tracks every active MediaStreamDestinationNode so we can disconnect them all on stop.
 const activeDestinations = new Set<MediaStreamAudioDestinationNode>();
 
 const BUFFER_AHEAD_SECONDS = 0.12;
 const KEEP_ALIVE_MS = 5_000;
-const SWITCH_STOP_DELAY_MS = 2_000;
 
 // ─── Logging ─────────────────────────────────────────────────────────────────
 
@@ -52,9 +50,10 @@ function getOrCreateContext(): { ctx: AudioContext; mix: GainNode } {
 }
 
 function scheduleChunk(mix: GainNode, ctx: AudioContext, buf: Buffer): void {
-    const float32 = new Float32Array(
-        buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer,
-    );
+    // Evita cópia extra quando o byteOffset já está alinhado em 4 bytes (caso comum no pool do Node)
+    const float32 = buf.byteOffset % 4 === 0
+        ? new Float32Array(buf.buffer as ArrayBuffer, buf.byteOffset, buf.byteLength / 4)
+        : new Float32Array((buf.buffer as ArrayBuffer).slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
     const audioBuffer = ctx.createBuffer(1, float32.length, 48000);
     audioBuffer.copyToChannel(float32, 0);
 
@@ -71,7 +70,6 @@ function stopCapture(): void {
     logState("stopCapture");
 
     if (keepAliveTimer) { clearTimeout(keepAliveTimer); keepAliveTimer = null; }
-    if (switchTimer) { clearTimeout(switchTimer); switchTimer = null; }
 
     // Stop FFmpeg — no more audio chunks sent to the mix bus.
     if (chunkListener) {
@@ -127,28 +125,16 @@ export async function createDShowStream(deviceName: string): Promise<MediaStream
     logState("createStream:enter", `request="${deviceName}"`);
 
     if (keepAliveTimer) { clearTimeout(keepAliveTimer); keepAliveTimer = null; }
-    // switchTimer is NOT cancelled here — it is only cancelled when switching to a
-    // DIFFERENT device. If the same device is re-requested during a teardown window
-    // (app re-init after user switched away), the timer continues and vMix stops.
 
     const { ctx, mix } = getOrCreateContext();
     if (ctx.state !== "running") await ctx.resume();
 
     // Same device already running.
     if (currentDevice === deviceName && chunkListener) {
-        if (switchTimer) {
-            // Teardown is pending (user switched away). Do NOT cancel — let FFmpeg stop.
-            // The stream returned here will go silent after the timer fires.
-            logState("createStream:reuse-teardown-pending");
-        } else {
-            logState("createStream:reuse");
-        }
+        logState("createStream:reuse");
         if (audioReadyPromise) await audioReadyPromise;
         return attachDestination(ctx, mix);
     }
-
-    // Different device — cancel any pending teardown and switch.
-    if (switchTimer) { clearTimeout(switchTimer); switchTimer = null; }
 
     // Stop existing capture first.
     if (chunkListener) {
@@ -164,7 +150,8 @@ export async function createDShowStream(deviceName: string): Promise<MediaStream
     nextStartTime = 0;
 
     let resolveReady!: () => void;
-    audioReadyPromise = new Promise<void>(r => { resolveReady = r; });
+    let rejectReady!: (e: unknown) => void;
+    audioReadyPromise = new Promise<void>((res, rej) => { resolveReady = res; rejectReady = rej; });
 
     let firstChunk = true;
     const listener = (_e: Electron.IpcRendererEvent, buf: Buffer): void => {
@@ -192,13 +179,17 @@ export async function createDShowStream(deviceName: string): Promise<MediaStream
         const timeout = setTimeout(() => resolve(false), 4_000);
         ipcRenderer.once(DSHOW_CHANNELS.chunk, () => { clearTimeout(timeout); resolve(true); });
         ipcRenderer.once(DSHOW_CHANNELS.error, () => { clearTimeout(timeout); resolve(false); });
+        ipcRenderer.once(DSHOW_CHANNELS.ended, () => { clearTimeout(timeout); resolve(false); });
     });
 
     if (!audioArrived) {
         ipcRenderer.removeListener(DSHOW_CHANNELS.chunk, listener);
         chunkListener = null; currentDevice = null;
+        const err = new DOMException(`"${deviceName}" produced no audio. Ensure vMix is active.`, "NotReadableError");
+        rejectReady(err);
+        audioReadyPromise = null;
         await ipcRenderer.invoke(DSHOW_CHANNELS.stop).catch(() => undefined);
-        throw new DOMException(`"${deviceName}" produced no audio. Ensure vMix is active.`, "NotReadableError");
+        throw err;
     }
 
     const onEnd = (): void => {
@@ -213,17 +204,4 @@ export async function createDShowStream(deviceName: string): Promise<MediaStream
 
     logState("createStream:ready");
     return attachDestination(ctx, mix);
-}
-
-export function scheduleCaptureTeardown(): void {
-    if (!chunkListener) return;
-    logState("teardown:scheduled", `delay=${SWITCH_STOP_DELAY_MS}ms`);
-    if (switchTimer) clearTimeout(switchTimer);
-    switchTimer = setTimeout(stopCapture, SWITCH_STOP_DELAY_MS);
-}
-
-export function stopCaptureImmediate(): void {
-    if (!chunkListener && !switchTimer) return;
-    logState("teardown:immediate");
-    stopCapture();
 }

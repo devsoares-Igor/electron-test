@@ -7,10 +7,9 @@ const CAPTURE_ARGS = [
     "-ar", "48000",
     "-ac", "1",
     "-f", "f32le",
-    "-blocksize", "16384",  // 4096 float32 samples per chunk
     "-fflags", "+nobuffer+flush_packets",
     "-flush_packets", "1",
-    "-loglevel", "quiet",
+    "-loglevel", "error",
     "pipe:1",
 ];
 
@@ -30,6 +29,10 @@ export class CaptureSession {
             ["-f", "dshow", "-i", `audio=${this.deviceName}`, ...CAPTURE_ARGS],
             { windowsHide: true },
         );
+
+        this.proc.stderr?.on("data", (chunk: Buffer) => {
+            console.error(`[FFmpeg dshow] ${chunk.toString().trimEnd()}`);
+        });
 
         this.proc.stdout?.on("data", (chunk: Buffer) => {
             if (!this.sender.isDestroyed()) {

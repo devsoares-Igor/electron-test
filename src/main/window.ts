@@ -4,7 +4,7 @@ import { SessionManager } from "./accounts/SessionManager";
 import { resolveLocale, resolveWebLocale, getCachedWebLocale } from "./locale";
 import { BrowserWindow, ipcMain, shell, WebContentsView, nativeTheme } from "electron";
 
-const TB_HEIGHT = 32;
+export const TB_HEIGHT = 32;
 
 /** Cores do overlay nativo (botões −□×) adaptadas ao tema do sistema */
 function overlayColors(isDark: boolean) {
@@ -24,6 +24,7 @@ const ALLOWED_PERMISSIONS = [
     "notifications",
     "display-capture",
     "screen-wake-lock",
+    "fullscreen",
 ];
 
 function applyPermissions(win: BrowserWindow): void {
@@ -121,10 +122,21 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
 
     const updateBounds = () => {
         const [w, h] = win.getContentSize();
-        view.setBounds({ x: 0, y: TB_HEIGHT, width: w, height: Math.max(0, h - TB_HEIGHT) });
+        const yOff = win.isFullScreen() ? 0 : TB_HEIGHT;
+        view.setBounds({ x: 0, y: yOff, width: w, height: Math.max(0, h - yOff) });
     };
     updateBounds();
     win.on("resize", updateBounds);
+    win.on("enter-full-screen", updateBounds);
+    win.on("leave-full-screen", () => {
+        updateBounds();
+        view.webContents.send("win:fullscreen-changed", false);
+    });
+
+    // iframes cross-origin (ex: YouTube) chamam requestFullscreen nativo —
+    // o proxy do preload não os intercepta, mas o Electron dispara esses eventos.
+    view.webContents.on("enter-html-full-screen", () => win.setFullScreen(true));
+    view.webContents.on("leave-html-full-screen", () => win.setFullScreen(false));
 
     // Reveal logic: show window after page loads (or after safety timeout)
     const revealWindow = () => {

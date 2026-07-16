@@ -1,11 +1,11 @@
 import path from "path";
 import { resolveWebLocale } from "../locale";
 import type { PickerResult, SourceData } from "../../shared/types/ipc";
-import { BrowserWindow, desktopCapturer, ipcMain, IpcMainEvent, WebContentsView } from "electron";
+import { BrowserWindow, desktopCapturer, ipcMain, IpcMainEvent, screen, WebContentsView } from "electron";
 
-export function registerScreenCaptureHandlers(view: WebContentsView): void {
+export function registerScreenCaptureHandlers(win: BrowserWindow, view: WebContentsView): void {
     ipcMain.handle("show-source-picker", (): Promise<PickerResult | null> => {
-        return openSourcePicker(view);
+        return openSourcePicker(win, view);
     });
 
     ipcMain.handle("get-screen-sources", async (): Promise<SourceData[]> => {
@@ -21,7 +21,7 @@ export function registerScreenCaptureHandlers(view: WebContentsView): void {
     });
 }
 
-async function openSourcePicker(view: WebContentsView): Promise<PickerResult | null> {
+async function openSourcePicker(win: BrowserWindow, view: WebContentsView): Promise<PickerResult | null> {
     const locale = await resolveWebLocale(view);
     const sources = await desktopCapturer.getSources({
         types: ["screen", "window"],
@@ -33,6 +33,15 @@ async function openSourcePicker(view: WebContentsView): Promise<PickerResult | n
         name: s.name,
         thumbnail: s.thumbnail.toDataURL(),
     }));
+
+    // Centra o picker no mesmo monitor que a janela principal
+    const winBounds = win.getBounds();
+    const display = screen.getDisplayMatching(winBounds);
+    const { x: dx, y: dy, width: dw, height: dh } = display.workArea;
+    const pickerW = 820;
+    const pickerH = 560;
+    const pickerX = Math.round(dx + (dw - pickerW) / 2);
+    const pickerY = Math.round(dy + (dh - pickerH) / 2);
 
     return new Promise<PickerResult | null>((resolve) => {
         let settled = false;
@@ -48,8 +57,10 @@ async function openSourcePicker(view: WebContentsView): Promise<PickerResult | n
         const iconPath = path.join(__dirname, "..", "..", "static", "icons", iconFile);
 
         const pickerWin = new BrowserWindow({
-            width: 820,
-            height: 560,
+            width: pickerW,
+            height: pickerH,
+            x: pickerX,
+            y: pickerY,
             resizable: false,
             title: " ",
             icon: iconPath,

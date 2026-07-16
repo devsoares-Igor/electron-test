@@ -70,6 +70,10 @@ app.whenReady().then(async () => {
     const { win, view } = createWindow();
     registerIpcHandlers(win, view);
 
+    if (process.env.OPEN_DEVTOOLS === "1") {
+        view.webContents.openDevTools({ mode: "detach" });
+    }
+
     app.on("activate", () => {
         if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });

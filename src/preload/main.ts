@@ -2,7 +2,7 @@ import { ipcRenderer } from "electron";
 import ptLocale from "../renderer/locales/pt.json";
 import enLocale from "../renderer/locales/en.json";
 import esLocale from "../renderer/locales/es.json";
-import { createDShowStream, DSHOW_DEVICE_PREFIX, scheduleCaptureTeardown, stopCaptureImmediate } from "./dshow-stream";
+import { createDShowStream, DSHOW_DEVICE_PREFIX } from "./dshow-stream";
 
 declare const __ELECTRON_SOURCE_HOST__: string;
 
@@ -115,6 +115,117 @@ if (document.readyState === "loading") {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─── Fullscreen proxy ─────────────────────────────────────────────────────────
+// A WebContentsView não suporta HTML fullscreen diretamente com titleBarOverlay.
+// Intercepta as chamadas da webapp e delega ao Electron, mantendo a API nativa.
+
+let _fullscreenElement: Element | null = null;
+
+const _dispatchFullscreenChange = (target: Element | null): void => {
+    (target ?? document.documentElement).dispatchEvent(new Event("fullscreenchange", { bubbles: true }));
+    if (target && target !== document.documentElement) {
+        document.dispatchEvent(new Event("fullscreenchange"));
+    }
+};
+
+Object.defineProperty(document, "fullscreenElement", {
+    get: () => _fullscreenElement,
+    configurable: true,
+});
+Object.defineProperty(document, "fullscreen", {
+    get: () => _fullscreenElement !== null,
+    configurable: true,
+});
+
+const _setFullscreenElement = (el: Element | null): void => { _fullscreenElement = el; };
+
+Element.prototype.requestFullscreen = function (_options?: FullscreenOptions): Promise<void> {
+    _setFullscreenElement(this);
+    ipcRenderer.send("win:set-fullscreen", true);
+    setTimeout(() => _dispatchFullscreenChange(this), 0);
+    return Promise.resolve();
+};
+
+document.exitFullscreen = function (): Promise<void> {
+    const el = _fullscreenElement;
+    _setFullscreenElement(null);
+    ipcRenderer.send("win:set-fullscreen", false);
+    setTimeout(() => _dispatchFullscreenChange(el), 0);
+    return Promise.resolve();
+};
+
+// Sincroniza quando o Electron sai do fullscreen via Esc ou OS
+ipcRenderer.on("win:fullscreen-changed", (_e, isFullscreen: boolean) => {
+    if (!isFullscreen && _fullscreenElement) {
+        const el = _fullscreenElement;
+        _setFullscreenElement(null);
+        _dispatchFullscreenChange(el);
+    }
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─── Iframe fullscreen permission ─────────────────────────────────────────────
+// O Chromium lê a Feature Policy do iframe no momento da inserção no DOM.
+// Para garantir allow="fullscreen" a tempo, interceptamos setAttribute e o
+// setter .allow ANTES da inserção, via Object.defineProperty.
+
+function _ensureFullscreenAllow(value: string): string {
+    return value.includes("fullscreen") ? value : (value ? `${value}; fullscreen` : "fullscreen");
+}
+
+// Intercepta el.setAttribute("allow", ...) — caminho usado pelo React
+const _origSetAttr = Element.prototype.setAttribute;
+Object.defineProperty(Element.prototype, "setAttribute", {
+    value(this: Element, name: string, value: string): void {
+        if (this instanceof HTMLIFrameElement && name === "allow") {
+            _origSetAttr.call(this, name, _ensureFullscreenAllow(value));
+        } else {
+            _origSetAttr.call(this, name, value);
+        }
+    },
+    writable: true,
+    configurable: true,
+});
+
+// Intercepta el.allow = "..." — caminho usado por código imperativo
+const _iframeAllowDesc = Object.getOwnPropertyDescriptor(HTMLIFrameElement.prototype, "allow");
+if (_iframeAllowDesc?.set) {
+    Object.defineProperty(HTMLIFrameElement.prototype, "allow", {
+        get: _iframeAllowDesc.get,
+        set(this: HTMLIFrameElement, value: string) {
+            _iframeAllowDesc.set!.call(this, _ensureFullscreenAllow(value));
+        },
+        configurable: true,
+        enumerable: _iframeAllowDesc.enumerable,
+    });
+}
+
+// Fallback para iframes já no DOM ou sem atributo "allow"
+new MutationObserver(mutations => {
+    for (const mutation of mutations) {
+        for (const node of mutation.addedNodes) {
+            if (node instanceof HTMLIFrameElement && !node.allow.includes("fullscreen")) {
+                _origSetAttr.call(node, "allow", _ensureFullscreenAllow(node.allow));
+            } else if (node instanceof Element) {
+                node.querySelectorAll<HTMLIFrameElement>("iframe").forEach(iframe => {
+                    if (!iframe.allow.includes("fullscreen")) {
+                        _origSetAttr.call(iframe, "allow", _ensureFullscreenAllow(iframe.allow));
+                    }
+                });
+            }
+        }
+    }
+}).observe((document.documentElement as Node | null) ?? document, { childList: true, subtree: true });
+
+document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll<HTMLIFrameElement>("iframe").forEach(iframe => {
+        if (!iframe.allow.includes("fullscreen")) {
+            _origSetAttr.call(iframe, "allow", _ensureFullscreenAllow(iframe.allow));
+        }
+    });
+}, { once: true });
+// ─────────────────────────────────────────────────────────────────────────────
+
 // ─── Intercept POST /device (fetch + XHR/axios) ───────────────────────────────
 
 function notifyLoginSuccess(url: string, reqBody: Record<string, unknown>, resBody: Record<string, unknown>): void {
@@ -216,33 +327,32 @@ window.addEventListener("DOMContentLoaded", () => {
         `;
         Object.assign(btn.style, {
             position: "fixed", top: "8px", left: "16px",
-            zIndex: "2147483647", display: "flex", alignItems: "center", gap: "7px",
-            padding: "7px 14px",
-            background: "rgba(15,23,42,0.92)",
-            color: "#94A3B8",
-            border: "1px solid rgba(255,255,255,0.10)",
+            zIndex: "2147483647", display: "flex", alignItems: "center", gap: "6px",
+            padding: "9px 16px",
+            background: "rgba(30,41,59,0.96)",
+            color: "#CBD5E1",
+            border: "1px solid rgba(148,163,184,0.18)",
             borderRadius: "8px",
-            fontSize: "13px",
+            fontSize: "14px",
             fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
             fontWeight: "500",
-            letterSpacing: "0.01em",
             cursor: "pointer",
-            backdropFilter: "blur(16px)",
-            boxShadow: "0 2px 12px rgba(0,0,0,0.4)",
-            transition: "background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s",
+            backdropFilter: "blur(12px)",
+            boxShadow: "0 1px 8px rgba(0,0,0,0.5)",
+            transition: "background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s",
             outline: "none",
             userSelect: "none",
         });
         btn.addEventListener("mouseenter", () => {
-            btn.style.background = "rgba(29,78,216,0.18)";
-            btn.style.color = "#60A5FA";
-            btn.style.borderColor = "rgba(96,165,250,0.35)";
+            btn.style.background = "rgba(51,65,85,0.98)";
+            btn.style.color = "#F1F5F9";
+            btn.style.borderColor = "rgba(148,163,184,0.35)";
             btn.style.transform = "translateY(-1px)";
         });
         btn.addEventListener("mouseleave", () => {
-            btn.style.background = "rgba(15,23,42,0.92)";
-            btn.style.color = "#94A3B8";
-            btn.style.borderColor = "rgba(255,255,255,0.10)";
+            btn.style.background = "rgba(30,41,59,0.96)";
+            btn.style.color = "#CBD5E1";
+            btn.style.borderColor = "rgba(148,163,184,0.18)";
             btn.style.transform = "translateY(0)";
         });
         btn.addEventListener("click", () => {
@@ -445,30 +555,18 @@ Object.defineProperty(navigator.mediaDevices, "getUserMedia", {
                 return audioStream;
             }
 
-            // Only schedule teardown when an explicit non-dshow deviceId was requested.
-            // Generic audio:true or audio without deviceId are permission/enum requests
-            // (e.g. the irmwebclient3 Devices component calls getUserMedia({audio:true,video:true})
-            // just to enumerate devices) and should NOT stop the vMix capture.
-            const hasExplicitDeviceId = !!(audio as MediaTrackConstraints).deviceId;
-            if (hasExplicitDeviceId) {
-                console.log(`[gUM] \u2192 non-dshow audio with explicit deviceId, scheduling vMix teardown`);
-                scheduleCaptureTeardown();
-            } else {
-                console.log(`[gUM] \u2192 non-dshow audio (no deviceId = permission/enum request, skipping teardown)`);
-            }
+            // Non-dshow audio: nunca interrompemos o vMix automaticamente aqui.
+            // deviceId explícito não é um sinal confiável de troca de dispositivo
+            // (o medidor de nível do webconference também chama getUserMedia com
+            // deviceId nativo enquanto testa o microfone). O cleanup do vMix
+            // acontece sozinho quando os tracks WebAudio se encerram por conta
+            // própria (onDestinationEnded → keepAlive timer → stopCapture).
+            console.log(`[gUM] → non-dshow audio`);
         }
 
         const stream = await originalGetUserMedia(constraints);
         const tracks = stream.getTracks().map(t => `${t.kind}:${t.label}`).join(", ");
         console.log(`[gUM] → native stream tracks: [${tracks}]`);
-
-        // Only stop vMix when the request had an explicit deviceId (genuine device switch).
-        // Generic requests like audio:true or audio without deviceId are permission/enum
-        // calls and should not interrupt the vMix capture.
-        const audioConstraint = constraints?.audio;
-        const hadExplicitDeviceId = audioConstraint && typeof audioConstraint === "object"
-            && !!(audioConstraint as MediaTrackConstraints).deviceId;
-        if (hadExplicitDeviceId && stream.getAudioTracks().length > 0) stopCaptureImmediate();
 
         return stream;
     },

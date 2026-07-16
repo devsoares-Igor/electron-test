@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Builda e abre o Electron no Windows
-# Uso: bash run-win.sh [local|school|staging|realms]  (padrão: school)
+# Uso: bash run-win.sh [local|school|staging|realms] [console]  (padrão: school)
+#   console  → mantém o terminal aberto mostrando os logs do Electron
 set -e
 
 cd "$(dirname "$0")"
@@ -12,6 +13,7 @@ export NVM_DIR="$HOME/.nvm"
 export PATH="$NVM_DIR/versions/node/$(ls $NVM_DIR/versions/node | tail -1)/bin:$PATH"
 
 ENV=${1:-school}
+CONSOLE=${2:-}
 WIN_USER=$(cmd.exe /c "echo %USERNAME%" 2>/dev/null | tr -d '\r')
 WIN_DIR_WSL="/mnt/c/Users/$WIN_USER/Realms-electron-app"
 WIN_DIR_WIN="C:\\Users\\$WIN_USER\\Realms-electron-app"
@@ -60,17 +62,24 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "
   Get-Process -Name 'electron','realms' -ErrorAction SilentlyContinue | Stop-Process -Force
   Start-Sleep -Milliseconds 800
 
-  # 2. Verifica se o build existe
+  # Verifica se o build existe
   if (-not (Test-Path '$WIN_DIR_WIN\out\main\index.js')) {
     Write-Host 'ERRO: out\main\index.js nao encontrado em $WIN_DIR_WIN'
     exit 1
   }
 
-  # 3. Lança electron (logs escritos pelo próprio app em Desktop\electron-log.txt)
+  # Lança electron
   \$exe  = '$WIN_DIR_WIN\node_modules\electron\dist\electron.exe'
   \$main = '$WIN_DIR_WIN\out\main\index.js'
-  Start-Process -FilePath \$exe -ArgumentList \$main,'--no-sandbox','--disable-gpu' -WorkingDirectory '$WIN_DIR_WIN'
-  Write-Host 'OK — logs em Desktop\electron-log.txt'
+  if ('$CONSOLE' -eq 'console') {
+    Write-Host '→ Modo console: terminal bloqueado até fechar o app'
+    \$env:OPEN_DEVTOOLS = '1'
+    \$proc = Start-Process -FilePath \$exe -ArgumentList \$main,'--no-sandbox','--disable-gpu' -WorkingDirectory '$WIN_DIR_WIN' -PassThru -Wait
+    Write-Host \"→ Electron encerrado (exit code: \$(\$proc.ExitCode))\"
+  } else {
+    Start-Process -FilePath \$exe -ArgumentList \$main,'--no-sandbox','--disable-gpu' -WorkingDirectory '$WIN_DIR_WIN'
+    Write-Host 'OK — logs em Desktop\electron-log.txt'
+  }
 "
 
-echo "✓ Electron aberto (env=$ENV)"
+echo "✓ Electron aberto (env=$ENV)${CONSOLE:+ [console]}"

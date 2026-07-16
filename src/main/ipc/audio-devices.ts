@@ -1,5 +1,8 @@
+import { promisify } from "util";
 import { ipcMain } from "electron";
-import { execSync } from "child_process";
+import { exec } from "child_process";
+
+const execAsync = promisify(exec);
 
 export type SystemAudioDevice = {
     name: string;
@@ -7,13 +10,19 @@ export type SystemAudioDevice = {
     direction: "input" | "output" | "unknown";
 };
 
-function runPowerShell(script: string): unknown[] {
+// Cache para evitar múltiplas chamadas simultâneas ao PowerShell
+const CACHE_TTL_MS = 5_000;
+let cachedDevices: SystemAudioDevice[] | null = null;
+let cacheTimestamp = 0;
+let inflightRequest: Promise<SystemAudioDevice[]> | null = null;
+
+async function runPowerShell(script: string): Promise<unknown[]> {
     try {
-        const out = execSync(
+        const { stdout } = await execAsync(
             `powershell.exe -NoProfile -NonInteractive -Command "${script}"`,
             { encoding: "utf8", timeout: 8_000, windowsHide: true },
         );
-        const parsed = JSON.parse(out.trim());
+        const parsed = JSON.parse(stdout.trim());
         return Array.isArray(parsed) ? parsed : [parsed];
     } catch {
         return [];
@@ -30,9 +39,9 @@ function isDevice(item: unknown): item is Record<string, unknown> {
     return typeof item === "object" && item !== null;
 }
 
-function listPnpEndpoints(): SystemAudioDevice[] {
+async function listPnpEndpoints(): Promise<SystemAudioDevice[]> {
     const ps = "Get-PnpDevice -Class AudioEndpoint | Select-Object FriendlyName,Status,InstanceId | ConvertTo-Json -Compress";
-    return runPowerShell(ps)
+    return (await runPowerShell(ps))
         .filter(isDevice)
         .filter(d => typeof d["FriendlyName"] === "string")
         .map(d => ({
@@ -42,9 +51,9 @@ function listPnpEndpoints(): SystemAudioDevice[] {
         } as SystemAudioDevice));
 }
 
-function listWmiDevices(): SystemAudioDevice[] {
+async function listWmiDevices(): Promise<SystemAudioDevice[]> {
     const ps = "Get-WmiObject Win32_SoundDevice | Select-Object Name,Status | ConvertTo-Json -Compress";
-    return runPowerShell(ps)
+    return (await runPowerShell(ps))
         .filter(isDevice)
         .filter(d => typeof d["Name"] === "string")
         .map(d => ({
@@ -54,7 +63,7 @@ function listWmiDevices(): SystemAudioDevice[] {
         } as SystemAudioDevice));
 }
 
-function listMMDevicesRegistry(): SystemAudioDevice[] {
+async function listMMDevicesRegistry(): Promise<SystemAudioDevice[]> {
     const ps = [
         "$r=@()",
         "$dirs=@('HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\MMDevices\\Audio\\Capture','HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\MMDevices\\Audio\\Render')",
@@ -71,7 +80,7 @@ function listMMDevicesRegistry(): SystemAudioDevice[] {
         "$r|ConvertTo-Json -Compress",
     ].join(";");
 
-    return runPowerShell(ps)
+    return (await runPowerShell(ps))
         .filter(isDevice)
         .filter(d => typeof d["name"] === "string")
         .map(d => ({
@@ -81,7 +90,7 @@ function listMMDevicesRegistry(): SystemAudioDevice[] {
         } as SystemAudioDevice));
 }
 
-function listDirectShowDevices(): SystemAudioDevice[] {
+async function listDirectShowDevices(): Promise<SystemAudioDevice[]> {
     const captureGuid = "{33D9A762-90C8-11D0-BD43-00A0C911CE86}";
     const renderGuid = "{E0F158E1-CB04-11D0-BD4E-00A0C911CE86}";
 
@@ -99,7 +108,7 @@ function listDirectShowDevices(): SystemAudioDevice[] {
         "$r|ConvertTo-Json -Compress",
     ].join(";");
 
-    return runPowerShell(ps)
+    return (await runPowerShell(ps))
         .filter(isDevice)
         .filter(d => typeof d["name"] === "string")
         .map(d => ({
@@ -109,25 +118,43 @@ function listDirectShowDevices(): SystemAudioDevice[] {
         } as SystemAudioDevice));
 }
 
-function listWindowsDevices(): SystemAudioDevice[] {
-    const sources = [
+async function listWindowsDevices(): Promise<SystemAudioDevice[]> {
+    const now = Date.now();
+
+    // Retorna cache se ainda válido
+    if (cachedDevices && (now - cacheTimestamp) < CACHE_TTL_MS) {
+        return cachedDevices;
+    }
+
+    // Reutiliza request em andamento para evitar chamadas paralelas duplicadas
+    if (inflightRequest) return inflightRequest;
+
+    inflightRequest = Promise.all([
         listDirectShowDevices(),
         listMMDevicesRegistry(),
         listPnpEndpoints(),
         listWmiDevices(),
-    ];
+    ]).then(sources => {
+        const seen = new Set<string>();
+        const result: SystemAudioDevice[] = [];
+        for (const device of sources.flat()) {
+            const key = device.name.toLowerCase();
+            if (!seen.has(key)) { seen.add(key); result.push(device); }
+        }
+        cachedDevices = result;
+        cacheTimestamp = Date.now();
+        inflightRequest = null;
+        return result;
+    }).catch(err => {
+        inflightRequest = null;
+        throw err;
+    });
 
-    const seen = new Set<string>();
-    const result: SystemAudioDevice[] = [];
-    for (const device of sources.flat()) {
-        const key = device.name.toLowerCase();
-        if (!seen.has(key)) { seen.add(key); result.push(device); }
-    }
-    return result;
+    return inflightRequest;
 }
 
 export function registerAudioDeviceHandlers(): void {
-    ipcMain.handle("list-system-audio-devices", (): SystemAudioDevice[] =>
-        process.platform === "win32" ? listWindowsDevices() : [],
+    ipcMain.handle("list-system-audio-devices", (): Promise<SystemAudioDevice[]> =>
+        process.platform === "win32" ? listWindowsDevices() : Promise.resolve([]),
     );
 }

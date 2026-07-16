@@ -61,4 +61,9 @@ export function registerWindowControlHandlers(win: BrowserWindow, view: WebConte
             menuPopup = null;
         });
     });
+
+    ipcMain.removeAllListeners("win:set-fullscreen");
+    ipcMain.on("win:set-fullscreen", (_event, enter: boolean) => {
+        win.setFullScreen(enter);
+    });
 }
