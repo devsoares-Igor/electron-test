@@ -1,4 +1,5 @@
 
+import { clipboard, ipcMain } from "electron";
 import { registerAccountHandlers } from "./accounts";
 import { registerAudioDeviceHandlers } from "./audio-devices";
 import type { BrowserWindow, WebContentsView } from "electron";
@@ -12,4 +13,8 @@ export function registerIpcHandlers(win: BrowserWindow, view: WebContentsView): 
     registerAudioDeviceHandlers();
     registerAudioCaptureHandlers();
     registerAccountHandlers(win, view);
+
+    ipcMain.handle("clipboard:write", (_e, text: string) => {
+        clipboard.writeText(String(text));
+    });
 }

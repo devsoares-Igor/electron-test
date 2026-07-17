@@ -30,6 +30,18 @@ try {
 } catch { /* non-fatal */ }
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─── Clipboard override (navigator.clipboard falha no Electron sem foco) ─────
+try {
+    Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        get: () => ({
+            writeText: (text: string) => ipcRenderer.invoke("clipboard:write", text),
+            readText: () => Promise.resolve(""),
+        }),
+    });
+} catch { /* non-fatal */ }
+// ─────────────────────────────────────────────────────────────────────────────
+
 window.electronAPI = {
     platform: process.platform,
     isElectron: true,
