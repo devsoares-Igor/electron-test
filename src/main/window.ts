@@ -1,5 +1,7 @@
 import path from "path";
+import { centerOnDisplay } from "./screen-utils";
 import { APP_HOST, APP_URL, IS_LOCAL } from "./config";
+import { colors, lightColors } from "../shared/colors";
 import { SessionManager } from "./accounts/SessionManager";
 import { resolveLocale, resolveWebLocale, getCachedWebLocale } from "./locale";
 import { BrowserWindow, ipcMain, shell, WebContentsView, nativeTheme } from "electron";
@@ -9,8 +11,8 @@ export const TB_HEIGHT = 32;
 /** Cores do overlay nativo (botões −□×) adaptadas ao tema do sistema */
 function overlayColors(isDark: boolean) {
     return {
-        color: isDark ? "#1E293B" : "#FFFFFF",
-        symbolColor: isDark ? "#94A3B8" : "#64748B",
+        color: isDark ? colors.bg2 : lightColors.bg2,
+        symbolColor: isDark ? colors.text2 : colors.text3,
         height: TB_HEIGHT,
     };
 }
@@ -61,30 +63,33 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
 
     const locale = resolveLocale();
 
+    const SPLASH_W = 360, SPLASH_H = 280;
     const splash = new BrowserWindow({
-        width: 360,
-        height: 280,
+        width: SPLASH_W,
+        height: SPLASH_H,
+        ...centerOnDisplay(SPLASH_W, SPLASH_H),
         frame: false,
-        center: true,
         resizable: false,
         alwaysOnTop: true,
         skipTaskbar: true,
-        backgroundColor: "#0F172A",
+        backgroundColor: colors.bg,
         webPreferences: { nodeIntegration: false, contextIsolation: true },
     });
     splash.loadFile(path.join(__dirname, "..", "renderer", "splash", "index.html"), { query: { locale } });
     splash.setMenu(null);
 
     // Main window — hidden titlebar + native overlay (Discord/VS Code style)
+    const WIN_W = 1280, WIN_H = 800;
     const win = new BrowserWindow({
-        width: 1280,
-        height: 800,
+        width: WIN_W,
+        height: WIN_H,
+        ...centerOnDisplay(WIN_W, WIN_H),
         minWidth: 800,
         minHeight: 600,
         icon: iconPath,
         show: false,
         titleBarStyle: "hidden",
-        backgroundColor: nativeTheme.shouldUseDarkColors ? "#1E293B" : "#FFFFFF",
+        backgroundColor: nativeTheme.shouldUseDarkColors ? colors.bg2 : lightColors.bg2,
         titleBarOverlay: overlayColors(nativeTheme.shouldUseDarkColors),
         webPreferences: {
             nodeIntegration: false,
@@ -100,7 +105,7 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
         if (win.isDestroyed()) return;
         const isDark = nativeTheme.shouldUseDarkColors;
         win.setTitleBarOverlay(overlayColors(isDark));
-        win.setBackgroundColor(isDark ? "#1E293B" : "#FFFFFF");
+        win.setBackgroundColor(isDark ? colors.bg2 : lightColors.bg2);
     };
     nativeTheme.on("updated", onNativeThemeUpdate);
     win.on("closed", () => {
@@ -118,7 +123,7 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
         },
     });
     win.contentView.addChildView(view);
-    view.setBackgroundColor("#0F172A");
+    view.setBackgroundColor(colors.bg);
 
     const updateBounds = () => {
         const [w, h] = win.getContentSize();
@@ -153,7 +158,7 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
 
     const loadAccountSelect = () => {
         const l = getCachedWebLocale();
-        view.setBackgroundColor(nativeTheme.shouldUseDarkColors ? "#0F172A" : "#EEF2F7");
+        view.setBackgroundColor(nativeTheme.shouldUseDarkColors ? colors.bg : lightColors.bg);
         view.webContents.loadFile(
             path.join(__dirname, "..", "renderer", "account-select", "index.html"),
             { query: { locale: l } },
@@ -161,7 +166,7 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
     };
 
     const loadApp = () => {
-        view.setBackgroundColor("#0F172A");
+        view.setBackgroundColor(colors.bg);
         view.webContents.loadURL(APP_URL);
     };
 
@@ -212,11 +217,13 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
             url.startsWith(`https://${APP_HOST}`);
 
         if (isInternal) {
+            const W = 900, H = 700;
             return {
                 action: "allow",
                 overrideBrowserWindowOptions: {
-                    width: 900,
-                    height: 700,
+                    width: W,
+                    height: H,
+                    ...centerOnDisplay(W, H, win.getBounds()),
                     webPreferences: {
                         preload: path.join(__dirname, "..", "preload", "main.js"),
                         contextIsolation: false,
@@ -234,11 +241,13 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
             url.startsWith("https://oauth2.googleapis.com/");
 
         if (isGoogleOAuth) {
+            const W = 500, H = 620;
             return {
                 action: "allow",
                 overrideBrowserWindowOptions: {
-                    width: 500,
-                    height: 620,
+                    width: W,
+                    height: H,
+                    ...centerOnDisplay(W, H, win.getBounds()),
                     resizable: false,
                     webPreferences: {
                         nodeIntegration: false,
@@ -252,11 +261,13 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
         // Termos e Privacidade — abrem como popup interno
         const isStaticDoc = url.startsWith("https://static.ip.tv/");
         if (isStaticDoc) {
+            const W = 860, H = 640;
             return {
                 action: "allow",
                 overrideBrowserWindowOptions: {
-                    width: 860,
-                    height: 640,
+                    width: W,
+                    height: H,
+                    ...centerOnDisplay(W, H, win.getBounds()),
                     resizable: true,
                     webPreferences: {
                         nodeIntegration: false,

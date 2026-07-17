@@ -1,16 +1,28 @@
-import { colors } from "../lib/theme";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Box, Paper, Typography, alpha } from "@mui/material";
+import { colors, buildLightDarkTheme } from "../lib/theme";
 import { AppButton, AppIcon, ThemeRoot } from "../components";
+import { Box, Paper, Typography, alpha, useMediaQuery } from "@mui/material";
 
 export default function Offline() {
     const { t } = useTranslation();
     const reason = new URLSearchParams(location.search).get("reason");
     const isDev = reason === "devserver";
+    const isDark = useMediaQuery("(prefers-color-scheme: dark)", { noSsr: true });
+    const theme = useMemo(() => buildLightDarkTheme(isDark ? "dark" : "light"), [isDark]);
 
     return (
-        <ThemeRoot>
-            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+        <ThemeRoot theme={theme}>
+            {/* Glow ambiente de fundo — mesmo tratamento do account-select */}
+            <Box aria-hidden sx={{
+                position: "fixed", inset: 0, overflow: "hidden",
+                pointerEvents: "none", zIndex: 0,
+                "&::before, &::after": { content: '""', position: "absolute", borderRadius: "50%", filter: "blur(120px)" },
+                "&::before": { width: 420, height: 420, top: "-15%", left: "-12%", background: isDark ? alpha(colors.accent, 0.18) : alpha(colors.accent, 0.09) },
+                "&::after": { width: 380, height: 380, bottom: "-15%", right: "-10%", background: isDark ? alpha(colors.green, 0.10) : alpha(colors.green, 0.06) },
+            }} />
+
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", position: "relative" }}>
                 <Paper
                     elevation={8}
                     sx={{ p: "48px 40px 40px", textAlign: "center", maxWidth: 400, width: "90%", borderRadius: 3 }}
@@ -23,9 +35,12 @@ export default function Offline() {
                             width: 72,
                             height: 72,
                             borderRadius: "50%",
-                            bgcolor: alpha(colors.accent, 0.12),
+                            bgcolor: isDark ? alpha(colors.accentL, 0.15) : alpha(colors.accent, 0.10),
                             mb: 3,
                             color: "primary.main",
+                            boxShadow: isDark
+                                ? `0 0 0 1px ${alpha(colors.accentL, 0.25)}, 0 0 32px ${alpha(colors.accent, 0.3)}`
+                                : `0 0 0 1px ${alpha(colors.accent, 0.18)}, 0 8px 28px ${alpha(colors.accent, 0.15)}`,
                         }}
                     >
                         <AppIcon name={isDev ? "devserver" : "offline"} sx={{ fontSize: 36 }} />
@@ -39,7 +54,7 @@ export default function Offline() {
                     <AppButton onClick={() => window.electronAPI?.retry()} sx={{ px: 3 }}>
                         {t("offline.retry")}
                     </AppButton>
-                    <Box sx={{ borderTop: `1px solid ${alpha(colors.text, 0.08)}`, mt: 4, pt: 2.5 }}>
+                    <Box sx={{ borderTop: "1px solid", borderColor: "divider", mt: 4, pt: 2.5 }}>
                         <Typography variant="caption" color="text.disabled">
                             {t(isDev ? "offline.devCaption" : "offline.offlineCaption")}
                         </Typography>

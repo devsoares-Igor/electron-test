@@ -63,6 +63,7 @@ export default function SaveSession() {
                                 bgcolor: alpha(colors.green, 0.12),
                                 display: "flex", alignItems: "center", justifyContent: "center",
                                 color: colors.green,
+                                boxShadow: `0 0 0 1px ${alpha(colors.green, 0.3)}, 0 0 32px ${alpha(colors.green, 0.28)}`,
                                 animation: "popIn 0.4s cubic-bezier(0.34,1.56,0.64,1)",
                                 "@keyframes popIn": {
                                     from: { transform: "scale(0.4)", opacity: 0 },
@@ -92,6 +93,7 @@ export default function SaveSession() {
                                 bgcolor: alpha(colors.green, 0.12),
                                 display: "flex", alignItems: "center", justifyContent: "center",
                                 color: colors.green,
+                                boxShadow: `0 0 0 1px ${alpha(colors.green, 0.3)}, 0 0 28px ${alpha(colors.green, 0.25)}`,
                             }}>
                                 <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
                                     <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />

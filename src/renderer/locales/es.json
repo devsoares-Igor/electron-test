@@ -5,7 +5,16 @@
     "titlebar": {
         "reload": "Recargar (F5)",
         "switchAccount": "Cambiar de cuenta",
-        "zoom": "Zoom"
+        "zoom": "Zoom",
+        "clearCache": "Limpiar caché"
+    },
+    "clearCache": {
+        "title": "Limpiar caché",
+        "message": "Esto borrará los datos guardados localmente por la aplicación y cerrará tu sesión en la aplicación.",
+        "messageLoggedOut": "Esto borrará los datos guardados localmente por la aplicación (caché, preferencias, archivos temporales).",
+        "confirm": "Limpiar y salir",
+        "confirmLoggedOut": "Limpiar",
+        "cancel": "Cancelar"
     },
     "offline": {
         "offlineTitle": "Sin conexión a internet",

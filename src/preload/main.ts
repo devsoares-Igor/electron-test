@@ -2,6 +2,7 @@ import { ipcRenderer } from "electron";
 import ptLocale from "../renderer/locales/pt.json";
 import enLocale from "../renderer/locales/en.json";
 import esLocale from "../renderer/locales/es.json";
+import { colors, withAlpha } from "../shared/colors";
 import { createDShowStream, DSHOW_DEVICE_PREFIX } from "./dshow-stream";
 
 declare const __ELECTRON_SOURCE_HOST__: string;
@@ -55,7 +56,7 @@ if (window.location.protocol === "file:" && typeof __ELECTRON_SOURCE_HOST__ !== 
     } catch { /* storage blocked */ }
 }
 
-// ─── Design System CSS injection (Discord/Slack pattern) ─────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 // Injeta tokens, scrollbar e estilos globais no webapp carregado no Electron.
 // Não sobrescreve estilos do webapp — apenas define :root vars e pseudoelementos.
 function injectDesignSystemCss(): void {
@@ -65,14 +66,14 @@ function injectDesignSystemCss(): void {
     style.textContent = [
         /* CSS custom properties — disponíveis globalmente no webapp */
         ":root{",
-        "  --realms-bg:#0F172A;",
-        "  --realms-bg2:#1E293B;",
-        "  --realms-bg3:#334155;",
-        "  --realms-accent:#1D4ED8;",
-        "  --realms-accent-l:#60A5FA;",
-        "  --realms-green:#10B981;",
-        "  --realms-text:#F1F5F9;",
-        "  --realms-text2:#94A3B8;",
+        `  --realms-bg:${colors.bg};`,
+        `  --realms-bg2:${colors.bg2};`,
+        `  --realms-bg3:${colors.bg3};`,
+        `  --realms-accent:${colors.accent};`,
+        `  --realms-accent-l:${colors.accentL};`,
+        `  --realms-green:${colors.green};`,
+        `  --realms-text:${colors.text};`,
+        `  --realms-text2:${colors.text2};`,
         "  --realms-font:'Inter',system-ui,-apple-system,sans-serif;",
         "  --realms-radius:8px;",
         "}",
@@ -83,15 +84,15 @@ function injectDesignSystemCss(): void {
         "::-webkit-scrollbar-thumb:hover{background:rgba(148,163,184,0.42)}",
         "::-webkit-scrollbar-corner{background:transparent}",
         /* Seleção de texto — azul do accent */
-        "::selection{background:rgba(29,78,216,0.28)}",
+        `::selection{background:${withAlpha(colors.accent, 0.28)}}`,
         /* Font smoothing — renderização mais nítida (padrão macOS/Chrome) */
         "*,*::before,*::after{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}",
         /* Barra de loading pré-injetada (disponível ANTES do React carregar) */
         /* Usada pelo account-select via classe CSS — nunca congela no primeiro render */
         "@keyframes __rbar1{0%{left:-35%;right:100%}60%,100%{left:100%;right:-90%}}",
         "@keyframes __rbar2{0%{left:-200%;right:100%}60%,100%{left:107%;right:-8%}}",
-        ".__realms_loading_bar{position:fixed;top:0;left:0;right:0;height:3px;z-index:9999;overflow:hidden;background:rgba(29,78,216,0.12);pointer-events:none}",
-        ".__realms_loading_bar::before,.__realms_loading_bar::after{content:'';position:absolute;top:0;bottom:0;background:linear-gradient(90deg,#1D4ED8,#60A5FA)}",
+        `.__realms_loading_bar{position:fixed;top:0;left:0;right:0;height:3px;z-index:9999;overflow:hidden;background:${withAlpha(colors.accent, 0.12)};pointer-events:none}`,
+        `.__realms_loading_bar::before,.__realms_loading_bar::after{content:'';position:absolute;top:0;bottom:0;background:linear-gradient(90deg,${colors.accent},${colors.accentL})}`,
         ".__realms_loading_bar::before{animation:__rbar1 2.1s cubic-bezier(.65,.815,.735,.395) infinite}",
         ".__realms_loading_bar::after{animation:__rbar2 2.1s cubic-bezier(.165,.84,.44,1) 1.15s infinite}",
         /* Separador titlebar → webapp: gradient shadow no topo do webapp (injetado aqui pois titlebar e webapp são janelas Electron separadas) */
@@ -320,7 +321,7 @@ window.addEventListener("DOMContentLoaded", () => {
         const btn = document.createElement("button");
         btn.id = "__realms_switch_account__";
         btn.innerHTML = `
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;opacity:0.85">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0">
                 <path d="M12 12.75c1.63 0 3.07.39 4.24.9 1.08.48 1.76 1.56 1.76 2.73V18H6v-1.61c0-1.18.68-2.26 1.76-2.73 1.17-.52 2.61-.91 4.24-.91zM4 13c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm1.13 1.1c-.37-.06-.74-.1-1.13-.1-.99 0-1.93.21-2.78.58C.48 14.9 0 15.62 0 16.43V18h4.5v-1.61c0-.83.23-1.61.63-2.29zM20 13c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm4 3.43c0-.81-.48-1.53-1.22-1.85C21.93 14.21 20.99 14 20 14c-.39 0-.76.04-1.13.1.4.68.63 1.46.63 2.29V18H24v-1.57zM12 6c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3z"/>
             </svg>
             <span>${switchLabel}</span>
@@ -329,30 +330,30 @@ window.addEventListener("DOMContentLoaded", () => {
             position: "fixed", top: "8px", left: "16px",
             zIndex: "2147483647", display: "flex", alignItems: "center", gap: "6px",
             padding: "9px 16px",
-            background: "rgba(30,41,59,0.96)",
-            color: "#CBD5E1",
-            border: "1px solid rgba(148,163,184,0.18)",
+            background: `linear-gradient(135deg, ${colors.accent} 0%, ${colors.accentH} 100%)`,
+            color: colors.text,
+            border: "1px solid rgba(255,255,255,0.14)",
             borderRadius: "8px",
             fontSize: "14px",
             fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
-            fontWeight: "500",
+            fontWeight: "600",
             cursor: "pointer",
             backdropFilter: "blur(12px)",
-            boxShadow: "0 1px 8px rgba(0,0,0,0.5)",
-            transition: "background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
+            transition: "background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s, box-shadow 0.15s",
             outline: "none",
             userSelect: "none",
         });
         btn.addEventListener("mouseenter", () => {
-            btn.style.background = "rgba(51,65,85,0.98)";
-            btn.style.color = "#F1F5F9";
-            btn.style.borderColor = "rgba(148,163,184,0.35)";
+            btn.style.background = `linear-gradient(135deg, ${colors.accentL} 0%, ${colors.accent} 100%)`;
+            btn.style.borderColor = "rgba(255,255,255,0.22)";
+            btn.style.boxShadow = "0 3px 12px rgba(0,0,0,0.45)";
             btn.style.transform = "translateY(-1px)";
         });
         btn.addEventListener("mouseleave", () => {
-            btn.style.background = "rgba(30,41,59,0.96)";
-            btn.style.color = "#CBD5E1";
-            btn.style.borderColor = "rgba(148,163,184,0.18)";
+            btn.style.background = `linear-gradient(135deg, ${colors.accent} 0%, ${colors.accentH} 100%)`;
+            btn.style.borderColor = "rgba(255,255,255,0.14)";
+            btn.style.boxShadow = "0 2px 8px rgba(0,0,0,0.35)";
             btn.style.transform = "translateY(0)";
         });
         btn.addEventListener("click", () => {
@@ -360,7 +361,7 @@ window.addEventListener("DOMContentLoaded", () => {
             style.textContent = "@keyframes __realms_slide{0%{background-position:200% 0}100%{background-position:-200% 0}}";
             document.head.appendChild(style);
             const bar = document.createElement("div");
-            bar.style.cssText = "position:fixed;top:0;left:0;right:0;height:3px;z-index:2147483647;background:linear-gradient(90deg,#60A5FA 0%,#3B82F6 40%,#60A5FA 100%);background-size:200% 100%;animation:__realms_slide 0.9s linear infinite;";
+            bar.style.cssText = `position:fixed;top:0;left:0;right:0;height:3px;z-index:2147483647;background:linear-gradient(90deg,${colors.accentL} 0%,${colors.accent} 40%,${colors.accentL} 100%);background-size:200% 100%;animation:__realms_slide 0.9s linear infinite;`;
             document.body.appendChild(bar);
             ipcRenderer.send("accounts:show-select");
         });
@@ -457,9 +458,6 @@ Object.defineProperty(navigator.mediaDevices, "enumerateDevices", {
         const [native, sys] = await Promise.all([originalEnumerateDevices(), getSystemDevices()]);
         const nativeLabels = native.map(d => d.label.toLowerCase().trim()).filter(Boolean);
 
-        // Use fuzzy match: exclude DirectShow devices whose name is contained in
-        // (or contains) any native Chrome label. This handles cases where Chrome
-        // appends USB IDs to labels, e.g. "Microfone (HD Pro Webcam C920) (046d:082d)".
         const isAlreadyNative = (name: string): boolean => {
             const n = name.toLowerCase().trim();
             return nativeLabels.some(nl => nl.includes(n) || n.includes(nl));
@@ -513,10 +511,7 @@ Object.defineProperty(navigator.mediaDevices, "getUserMedia", {
             if (deviceId.startsWith(DSHOW_DEVICE_PREFIX)) {
                 const deviceName = decodeURIComponent(deviceId.slice(DSHOW_DEVICE_PREFIX.length));
 
-                // Before using FFmpeg, check if Chrome can access this device natively.
-                // Some devices appear in the DirectShow registry with a different name than
-                // their Chrome/WASAPI label (e.g. Windows in Portuguese vs Chrome in English).
-                // If a fuzzy name match exists in the native list, prefer Chrome's native path.
+
                 const nativeDevices = await originalEnumerateDevices();
                 const n = deviceName.toLowerCase();
                 const nativeMatch = nativeDevices.find(d =>
@@ -555,12 +550,6 @@ Object.defineProperty(navigator.mediaDevices, "getUserMedia", {
                 return audioStream;
             }
 
-            // Non-dshow audio: nunca interrompemos o vMix automaticamente aqui.
-            // deviceId explícito não é um sinal confiável de troca de dispositivo
-            // (o medidor de nível do webconference também chama getUserMedia com
-            // deviceId nativo enquanto testa o microfone). O cleanup do vMix
-            // acontece sozinho quando os tracks WebAudio se encerram por conta
-            // própria (onDestinationEnded → keepAlive timer → stopCapture).
             console.log(`[gUM] → non-dshow audio`);
         }
 
@@ -612,12 +601,12 @@ const PROGRESS_CSS = `
 #${PROGRESS_BAR_ID} {
     position: fixed; top: 0; left: 0; right: 0;
     height: 4px; overflow: hidden;
-    background: rgba(88,101,242,.24);
+    background: ${withAlpha(colors.accent, 0.24)};
     z-index: 2147483647; pointer-events: none;
 }
 #${PROGRESS_BAR_ID} > span {
     position: absolute; top: 0; bottom: 0;
-    background: #5865F2; width: auto;
+    background: ${colors.accent}; width: auto;
 }
 #${PROGRESS_BAR_ID} > span:first-child {
     animation: __ep1__ 2.1s cubic-bezier(.65,.815,.735,.395) infinite;

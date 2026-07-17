@@ -8,4 +8,5 @@ contextBridge.exposeInMainWorld("titlebarAPI", {
     showAccountSelect: (): void => ipcRenderer.send("accounts:show-select"),
     hasSavedAccounts: (): Promise<boolean> =>
         ipcRenderer.invoke("accounts:count").then((n: unknown) => (n as number) > 0),
+    clearCache: (): void => ipcRenderer.send("clear-cache"),
 });

@@ -15,7 +15,8 @@ import {
     CircularProgress,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import { useEffect, useMemo, useState } from "react";
+import type { CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { buildLightDarkTheme, colors } from "../lib/theme";
 import type { SavedAccount } from "../../shared/types/ipc";
 import { ThemeRoot, AppButton, AppIconButton } from "../components";
@@ -61,14 +62,46 @@ interface CardProps {
 
 function AccountCard({ acc, isCurrent, isLoading, isDisabled, managing, isDark, t, onSelect, onRemove }: CardProps) {
     const clickable = !managing && !isDisabled;
+    const cardRef = useRef<HTMLDivElement | null>(null);
+    const [flipStyle, setFlipStyle] = useState<CSSProperties | null>(null);
+
+    const handleClick = () => {
+        if (!clickable) return;
+        const rect = cardRef.current?.getBoundingClientRect();
+        if (rect) {
+            // Fase 1: fixa o card exatamente onde ele já está (sem transição)
+            setFlipStyle({
+                position: "fixed",
+                top: rect.top, left: rect.left,
+                width: rect.width, height: rect.height,
+                margin: 0, zIndex: 20, transition: "none",
+            });
+        }
+        onSelect();
+    };
+
+    useEffect(() => {
+        if (!isLoading) { setFlipStyle(null); return; }
+        // Fase 2 (próximo frame): anima do lugar original pro centro da tela
+        const raf = requestAnimationFrame(() => {
+            setFlipStyle(prev => prev && {
+                ...prev,
+                top: "50%", left: "50%", transform: "translate(-50%, -50%)",
+                transition: "top 0.45s cubic-bezier(.4,0,.2,1), left 0.45s cubic-bezier(.4,0,.2,1), transform 0.45s cubic-bezier(.4,0,.2,1)",
+            });
+        });
+        return () => cancelAnimationFrame(raf);
+    }, [isLoading]);
 
     return (
         <Box
+            ref={cardRef}
             role="button"
             tabIndex={clickable ? 0 : -1}
             aria-label={`${acc.name} – ${t("accounts.clickToEnter")}`}
-            onKeyDown={e => { if (clickable && (e.key === "Enter" || e.key === " ")) onSelect(); }}
-            onClick={() => clickable && onSelect()}
+            onKeyDown={e => { if (clickable && (e.key === "Enter" || e.key === " ")) handleClick(); }}
+            onClick={handleClick}
+            style={flipStyle ?? undefined}
             sx={{
                 position: "relative",
                 display: "flex",
@@ -85,8 +118,15 @@ function AccountCard({ acc, isCurrent, isLoading, isDisabled, managing, isDark, 
                 cursor: managing ? "default" : isDisabled ? "not-allowed" : "pointer",
                 userSelect: "none",
                 outline: "none",
-                transition: "border-color 0.2s, box-shadow 0.2s, transform 0.2s",
-                opacity: isDisabled && !isLoading ? 0.55 : 1,
+                boxShadow: isLoading
+                    ? (isDark ? `0 12px 40px ${alpha(colors.accent, 0.35)}` : `0 12px 32px rgba(0,0,0,0.18)`)
+                    : isCurrent
+                        ? (isDark ? `0 4px 22px ${alpha(colors.accent, 0.18)}` : `0 4px 16px rgba(0,0,0,0.07)`)
+                        : (isDark ? "0 2px 12px rgba(0,0,0,0.25)" : "0 2px 10px rgba(0,0,0,0.05)"),
+                transition: "opacity 0.25s ease, box-shadow 0.25s ease, border-color 0.2s",
+                opacity: isDisabled && !isLoading ? 0 : 1,
+                pointerEvents: isDisabled && !isLoading ? "none" : "auto",
+                transform: !flipStyle && isDisabled && !isLoading ? "scale(0.92)" : undefined,
                 "&:hover": clickable ? {
                     borderColor: alpha(colors.accentL, 0.8),
                     transform: "translateY(-3px)",
@@ -119,7 +159,10 @@ function AccountCard({ acc, isCurrent, isLoading, isDisabled, managing, isDark, 
                     </Box>
                 )}
 
-                <Avatar sx={{ width: 80, height: 80, bgcolor: acc.avatarColor, fontSize: 28, fontWeight: 700 }}>
+                <Avatar sx={{
+                    width: 80, height: 80, bgcolor: acc.avatarColor, fontSize: 28, fontWeight: 700,
+                    boxShadow: `0 0 0 3px ${alpha(acc.avatarColor, 0.25)}, 0 0 26px ${alpha(acc.avatarColor, 0.45)}`,
+                }}>
                     {isLoading
                         ? <CircularProgress size={28} color="inherit" thickness={3} />
                         : initials(acc.name)}
@@ -134,7 +177,7 @@ function AccountCard({ acc, isCurrent, isLoading, isDisabled, managing, isDark, 
                             sx={{
                                 position: "absolute", top: -6, right: -6,
                                 width: 26, height: 26,
-                                bgcolor: "error.main", color: "#fff",
+                                bgcolor: "error.main", color: colors.text,
                                 border: "2px solid", borderColor: "background.default",
                                 "&:hover": { bgcolor: "error.dark", transform: "scale(1.1)" },
                                 transition: "transform 0.15s",
@@ -205,21 +248,35 @@ function AccountCard({ acc, isCurrent, isLoading, isDisabled, managing, isDark, 
             {/* Botão entrar */}
             {!managing && (
                 <AppButton
-                    variant="outlined"
+                    variant={isCurrent ? "contained" : "outlined"}
                     size="small"
                     fullWidth
                     disabled={isDisabled}
                     endIcon={<ArrowIcon />}
-                    onClick={e => { e.stopPropagation(); if (clickable) onSelect(); }}
+                    onClick={e => { e.stopPropagation(); handleClick(); }}
                     sx={{
                         mt: "auto",
                         fontSize: "clamp(11px, 1vw, 13px)",
-                        borderColor: alpha(colors.accentL, 0.5),
-                        color: colors.accentL,
-                        "&:hover": {
-                            borderColor: colors.accentL,
-                            bgcolor: alpha(colors.accent, 0.08),
-                        },
+                        fontWeight: 700,
+                        transition: "transform 0.15s, box-shadow 0.15s, background 0.15s, border-color 0.15s",
+                        ...(isCurrent ? {
+                            background: `linear-gradient(135deg, ${colors.accent} 0%, ${colors.accentH} 100%)`,
+                            color: colors.text,
+                            boxShadow: `0 3px 14px ${alpha(colors.accent, 0.4)}`,
+                            "&:hover": {
+                                background: `linear-gradient(135deg, ${colors.accentL} 0%, ${colors.accent} 100%)`,
+                                boxShadow: `0 4px 18px ${alpha(colors.accent, 0.55)}`,
+                                transform: "translateY(-1px)",
+                            },
+                        } : {
+                            borderColor: alpha(colors.accentL, 0.5),
+                            color: colors.accentL,
+                            "&:hover": {
+                                borderColor: colors.accentL,
+                                bgcolor: alpha(colors.accent, 0.08),
+                                transform: "translateY(-1px)",
+                            },
+                        }),
                         "&:disabled": { opacity: 0.5 },
                     }}
                 >
@@ -352,11 +409,26 @@ export default function AccountSelect() {
             {/* ── Layout: coluna com area scrollavel + barra fixa ── */}
             <Box sx={{
                 height: "100vh", display: "flex", flexDirection: "column",
-                bgcolor: "background.default", overflow: "hidden",
+                bgcolor: "background.default", overflow: "hidden", position: "relative",
                 animation: exiting ? "acctFadeOut 0.2s ease-in forwards" : "acctFadeIn 0.18s ease-out",
                 "@keyframes acctFadeIn": { from: { opacity: 0 }, to: { opacity: 1 } },
                 "@keyframes acctFadeOut": { from: { opacity: 1 }, to: { opacity: 0 } },
             } as object}>
+
+                {/* Glow ambiente de fundo — puramente decorativo, atrás de todo o conteúdo */}
+                <Box aria-hidden sx={{
+                    position: "absolute", inset: 0, overflow: "hidden",
+                    pointerEvents: "none", zIndex: -1,
+                    "&::before, &::after": { content: '""', position: "absolute", borderRadius: "50%", filter: "blur(120px)" },
+                    "&::before": {
+                        width: 480, height: 480, top: "-14%", left: "-10%",
+                        background: isDark ? alpha(colors.accent, 0.18) : alpha(colors.accent, 0.09),
+                    },
+                    "&::after": {
+                        width: 420, height: 420, bottom: "-16%", right: "-8%",
+                        background: isDark ? alpha(colors.green, 0.12) : alpha(colors.green, 0.07),
+                    },
+                }} />
 
                 {emptyState ? (
                     /* Estado vazio: centralizado */
@@ -403,13 +475,21 @@ export default function AccountSelect() {
                             <Box sx={{ width: "100%", maxWidth: "min(95vw, 1400px)", display: "flex", flexDirection: "column", alignItems: "center", my: "auto" }}>
 
                                 {/* Cabeçalho */}
-                                <Box sx={{ textAlign: "center", mb: { xs: 3, md: 4 }, width: "100%" }}>
+                                <Box sx={{
+                                    textAlign: "center", mb: { xs: 3, md: 4 }, width: "100%",
+                                    opacity: loading ? 0 : 1,
+                                    pointerEvents: loading ? "none" : "auto",
+                                    transition: "opacity 0.25s ease",
+                                }}>
                                     <Box sx={{
                                         width: "clamp(56px, 6vw, 76px)", height: "clamp(56px, 6vw, 76px)",
                                         borderRadius: "50%",
                                         bgcolor: isDark ? alpha(colors.accentL, 0.15) : alpha(colors.accent, 0.10),
                                         display: "flex", alignItems: "center", justifyContent: "center",
                                         color: isDark ? colors.accentL : colors.accent, mx: "auto", mb: 2,
+                                        boxShadow: isDark
+                                            ? `0 0 0 1px ${alpha(colors.accentL, 0.28)}, 0 0 36px ${alpha(colors.accent, 0.35)}`
+                                            : `0 0 0 1px ${alpha(colors.accent, 0.18)}, 0 8px 28px ${alpha(colors.accent, 0.15)}`,
                                     }}>
                                         <PersonGroupIcon size={36} />
                                     </Box>
@@ -434,8 +514,8 @@ export default function AccountSelect() {
                                 {error && (
                                     <Box sx={{
                                         mb: 3, px: 2.5, py: 1.5,
-                                        bgcolor: alpha("#ed4245", 0.1),
-                                        border: `1px solid ${alpha("#ed4245", 0.3)}`,
+                                        bgcolor: alpha(colors.danger, 0.1),
+                                        border: `1px solid ${alpha(colors.danger, 0.3)}`,
                                         borderRadius: 2, maxWidth: 560, width: "100%",
                                     }}>
                                         <Typography variant="body2" color="error.main">{error}</Typography>

@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useEffect, useMemo, useState } from "react";
-import { buildLightDarkTheme, colors } from "../lib/theme";
 import { AppIcon, AppIconButton, ThemeRoot } from "../components";
+import { buildLightDarkTheme, colors, lightColors } from "../lib/theme";
 import { Box, Divider, Typography, createTheme, alpha, useMediaQuery } from "@mui/material";
 
 export default function TitlebarMenu() {
@@ -12,12 +12,12 @@ export default function TitlebarMenu() {
 
     const theme = useMemo(() => createTheme(
         buildLightDarkTheme(isDark ? "dark" : "light"),
-        { palette: { background: { default: isDark ? colors.bg3 : "#FFFFFF", paper: isDark ? colors.bg3 : "#FFFFFF" } } }
+        { palette: { background: { default: isDark ? colors.bg3 : lightColors.bg2, paper: isDark ? colors.bg3 : lightColors.bg2 } } }
     ), [isDark]);
 
-    const itemColor = isDark ? colors.text2 : "#475569";
+    const itemColor = isDark ? colors.text2 : lightColors.text2;
     const itemHoverBg = isDark ? alpha(colors.text, 0.06) : "rgba(0,0,0,0.05)";
-    const itemHoverColor = isDark ? colors.text : "#0F172A";
+    const itemHoverColor = isDark ? colors.text : lightColors.text;
 
     const BTN = {
         width: 26, height: 26, color: itemColor, borderRadius: "6px",
@@ -50,7 +50,7 @@ export default function TitlebarMenu() {
                 {/* Zoom */}
                 <Box sx={{ display: "flex", alignItems: "center", px: 1.5, py: 0.75 }}>
                     <AppIcon name="zoomIn" sx={{ width: 16, height: 16, color: itemColor, mr: 1, flexShrink: 0 }} />
-                    <Typography sx={{ fontSize: 13, color: isDark ? colors.text : "#0F172A", flex: 1 }}>
+                    <Typography sx={{ fontSize: 13, color: isDark ? colors.text : lightColors.text, flex: 1 }}>
                         {t("titlebar.zoom")}
                     </Typography>
                     <Box sx={{ display: "flex", alignItems: "center", bgcolor: alpha(colors.accent, 0.12), borderRadius: "6px", px: "2px", border: `1px solid ${alpha(colors.accentL, 0.15)}` }}>
@@ -91,6 +91,23 @@ export default function TitlebarMenu() {
                         </Box>
                     </>
                 )}
+
+                <Divider sx={{ borderColor: isDark ? alpha(colors.text, 0.07) : "rgba(0,0,0,0.08)" }} />
+                <Box
+                    component="button"
+                    onClick={() => { window.titlebarAPI.clearCache?.(); window.close(); }}
+                    sx={{
+                        ...ROW_SX,
+                        fontFamily: "inherit",
+                        fontSize: 13,
+                        lineHeight: 1,
+                    }}
+                >
+                    <AppIcon name="clearCache" sx={{ width: 16, height: 16, flexShrink: 0, color: "inherit" }} />
+                    <Typography sx={{ fontSize: 13, color: "inherit", whiteSpace: "nowrap" }}>
+                        {t("titlebar.clearCache")}
+                    </Typography>
+                </Box>
             </Box>
         </ThemeRoot>
     );

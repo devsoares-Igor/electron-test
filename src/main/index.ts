@@ -61,9 +61,6 @@ app.whenReady().then(async () => {
     });
 
     await requestMediaPermissions();
-    await FfmpegManager.initialize();
-
-    prewarmLocal();
 
     console.log(`[Electron] env=${CURRENT_ENV} url=${APP_URL}`);
 
@@ -73,6 +70,13 @@ app.whenReady().then(async () => {
     if (process.env.OPEN_DEVTOOLS === "1") {
         view.webContents.openDevTools({ mode: "detach" });
     }
+
+    // Não bloqueia a primeira janela: nada na inicialização depende do FFmpeg
+    // (só é usado quando o usuário inicia uma captura — audio-capture.ts já
+    // tem retry/lazy-init próprio caso ainda não esteja pronto nesse momento).
+    FfmpegManager.initialize();
+
+    prewarmLocal();
 
     app.on("activate", () => {
         if (BrowserWindow.getAllWindows().length === 0) createWindow();

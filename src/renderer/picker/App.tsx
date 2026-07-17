@@ -8,9 +8,10 @@ import {
     Typography,
     FormControlLabel,
     CircularProgress,
+    useMediaQuery,
 } from "@mui/material";
-import { colors } from "../lib/theme";
-import { useEffect, useState } from "react";
+import { colors, lightColors, buildLightDarkTheme } from "../lib/theme";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AppButton, ThemeRoot } from "../components";
 import type { SourceData } from "../../shared/types/ipc";
@@ -18,11 +19,13 @@ import type { SourceData } from "../../shared/types/ipc";
 function SourceCard({
     src,
     selected,
+    isDark,
     onSelect,
     onDoubleClick,
 }: {
     src: SourceData;
     selected: boolean;
+    isDark: boolean;
     onSelect: () => void;
     onDoubleClick: () => void;
 }) {
@@ -40,8 +43,8 @@ function SourceCard({
                 borderRadius: 1.5,
                 transition: "border-color 0.15s, background-color 0.15s",
                 "&:hover": {
-                    bgcolor: selected ? alpha(colors.accent, 0.28) : colors.bg3,
-                    borderColor: selected ? "primary.main" : colors.bg4,
+                    bgcolor: selected ? alpha(colors.accent, 0.28) : (isDark ? colors.bg3 : "rgba(0,0,0,0.04)"),
+                    borderColor: selected ? "primary.main" : (isDark ? colors.bg4 : "rgba(0,0,0,0.14)"),
                 },
             }}
         >
@@ -52,7 +55,7 @@ function SourceCard({
                     width: "100%",
                     aspectRatio: "16 / 9",
                     objectFit: "contain",
-                    bgcolor: colors.bg,
+                    bgcolor: "background.default",
                     borderRadius: "4px",
                     display: "block",
                 }}
@@ -75,6 +78,8 @@ export default function App() {
     const [tab, setTab] = useState(0);
     const [selected, setSelected] = useState<string | null>(null);
     const [audio, setAudio] = useState(false);
+    const isDark = useMediaQuery("(prefers-color-scheme: dark)", { noSsr: true });
+    const theme = useMemo(() => buildLightDarkTheme(isDark ? "dark" : "light"), [isDark]);
 
     useEffect(() => {
         window.pickerAPI.getSources().then(setSources);
@@ -89,7 +94,7 @@ export default function App() {
     };
 
     return (
-        <ThemeRoot>
+        <ThemeRoot theme={theme}>
             <Box
                 sx={{
                     px: 3,
@@ -132,7 +137,7 @@ export default function App() {
                         mb: 1.5,
                         pr: 0.5,
                         "&::-webkit-scrollbar": { width: "6px" },
-                        "&::-webkit-scrollbar-thumb": { bgcolor: colors.bg4, borderRadius: "3px" },
+                        "&::-webkit-scrollbar-thumb": { bgcolor: isDark ? colors.bg4 : "rgba(0,0,0,0.18)", borderRadius: "3px" },
                     }}
                 >
                     {sources === null ? (
@@ -183,6 +188,7 @@ export default function App() {
                                     key={src.id}
                                     src={src}
                                     selected={selected === src.id}
+                                    isDark={isDark}
                                     onSelect={() => setSelected(src.id)}
                                     onDoubleClick={() => doShare(src.id)}
                                 />
@@ -208,7 +214,7 @@ export default function App() {
                                     height="16"
                                     viewBox="0 0 24 24"
                                     fill="currentColor"
-                                    style={{ color: colors.text2, flexShrink: 0 }}
+                                    style={{ color: isDark ? colors.text2 : lightColors.text2, flexShrink: 0 }}
                                 >
                                     <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" />
                                 </svg>

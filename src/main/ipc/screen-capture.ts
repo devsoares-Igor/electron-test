@@ -1,7 +1,8 @@
 import path from "path";
 import { resolveWebLocale } from "../locale";
+import { centerOnDisplay } from "../screen-utils";
 import type { PickerResult, SourceData } from "../../shared/types/ipc";
-import { BrowserWindow, desktopCapturer, ipcMain, IpcMainEvent, screen, WebContentsView } from "electron";
+import { BrowserWindow, desktopCapturer, ipcMain, IpcMainEvent, WebContentsView } from "electron";
 
 export function registerScreenCaptureHandlers(win: BrowserWindow, view: WebContentsView): void {
     ipcMain.handle("show-source-picker", (): Promise<PickerResult | null> => {
@@ -35,13 +36,9 @@ async function openSourcePicker(win: BrowserWindow, view: WebContentsView): Prom
     }));
 
     // Centra o picker no mesmo monitor que a janela principal
-    const winBounds = win.getBounds();
-    const display = screen.getDisplayMatching(winBounds);
-    const { x: dx, y: dy, width: dw, height: dh } = display.workArea;
     const pickerW = 820;
     const pickerH = 560;
-    const pickerX = Math.round(dx + (dw - pickerW) / 2);
-    const pickerY = Math.round(dy + (dh - pickerH) / 2);
+    const { x: pickerX, y: pickerY } = centerOnDisplay(pickerW, pickerH, win.getBounds());
 
     return new Promise<PickerResult | null>((resolve) => {
         let settled = false;

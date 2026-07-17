@@ -1,9 +1,10 @@
-import { colors } from "../lib/theme";
+import { useMemo } from "react";
 import logoUrl from "./logo_loading.svg";
 import { ThemeRoot } from "../components";
 import { keyframes } from "@emotion/react";
 import { useTranslation } from "react-i18next";
-import { Box, LinearProgress, Typography, alpha } from "@mui/material";
+import { colors, lightColors, buildLightDarkTheme } from "../lib/theme";
+import { Box, LinearProgress, Typography, alpha, useMediaQuery } from "@mui/material";
 
 const pulse = keyframes`
     0%   { transform: translateZ(0) scale(1);    opacity: 1; }
@@ -13,13 +14,15 @@ const pulse = keyframes`
 
 export default function Splash() {
     const { t } = useTranslation();
+    const isDark = useMediaQuery("(prefers-color-scheme: dark)", { noSsr: true });
+    const theme = useMemo(() => buildLightDarkTheme(isDark ? "dark" : "light"), [isDark]);
 
     return (
-        <ThemeRoot>
+        <ThemeRoot theme={theme}>
             {/* Glow de fundo — radial centrado no logo */}
             <Box sx={{
                 position: "fixed", inset: 0, pointerEvents: "none",
-                background: `radial-gradient(ellipse 260px 180px at 50% 42%, ${alpha(colors.accent, 0.22)} 0%, transparent 70%)`,
+                background: `radial-gradient(ellipse 260px 180px at 50% 42%, ${alpha(colors.accent, isDark ? 0.22 : 0.12)} 0%, transparent 70%)`,
             }} />
 
             <Box
@@ -39,22 +42,22 @@ export default function Splash() {
                 <Box sx={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", mb: 3 }}>
                     <Box sx={{
                         position: "absolute",
-                        width: 180, height: 180, borderRadius: "50%",
-                        background: `radial-gradient(circle, ${alpha(colors.accent, 0.18)} 0%, transparent 65%)`,
+                        width: 220, height: 220, borderRadius: "50%",
+                        background: `radial-gradient(circle, ${alpha(colors.accent, isDark ? 0.18 : 0.10)} 0%, transparent 65%)`,
                     }} />
                     <Box
                         component="img"
                         src={logoUrl as string}
                         alt="Realms"
                         sx={{
-                            width: 108,
-                            height: 108,
+                            width: 140,
+                            height: 140,
                             position: "relative",
                             zIndex: 1,
                             willChange: "transform",
                             backfaceVisibility: "hidden",
                             animation: `${pulse} 2.5s ease-in-out infinite`,
-                            filter: `drop-shadow(0 4px 28px ${alpha(colors.accent, 0.5)})`,
+                            filter: `drop-shadow(0 4px 28px ${alpha(colors.accent, isDark ? 0.5 : 0.3)})`,
                         }}
                     />
                 </Box>
@@ -65,7 +68,7 @@ export default function Splash() {
                     fontWeight: 700,
                     fontSize: "1.375rem",
                     letterSpacing: "-0.02em",
-                    color: colors.text,
+                    color: isDark ? colors.text : lightColors.text,
                     mb: 0.75,
                 }}>
                     Realms
@@ -74,7 +77,7 @@ export default function Splash() {
                 {/* Status */}
                 <Typography sx={{
                     fontSize: "0.6875rem",
-                    color: colors.text3,
+                    color: "text.disabled",
                     letterSpacing: "0.06em",
                     textTransform: "uppercase",
                     fontWeight: 500,
@@ -89,7 +92,7 @@ export default function Splash() {
                     color="primary"
                     sx={{
                         height: 2,
-                        bgcolor: alpha(colors.accent, 0.12),
+                        bgcolor: alpha(colors.accent, isDark ? 0.12 : 0.15),
                         "& .MuiLinearProgress-bar": {
                             background: `linear-gradient(90deg, ${colors.accent}, ${colors.accentL})`,
                         },

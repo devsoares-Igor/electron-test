@@ -5,7 +5,16 @@
     "titlebar": {
         "reload": "Reload (F5)",
         "switchAccount": "Switch account",
-        "zoom": "Zoom"
+        "zoom": "Zoom",
+        "clearCache": "Clear cache"
+    },
+    "clearCache": {
+        "title": "Clear cache",
+        "message": "This will erase data stored locally by the app, and you will be logged out of the application.",
+        "messageLoggedOut": "This will erase data stored locally by the app (cache, preferences, temporary files).",
+        "confirm": "Clear and log out",
+        "confirmLoggedOut": "Clear",
+        "cancel": "Cancel"
     },
     "offline": {
         "offlineTitle": "No internet connection",

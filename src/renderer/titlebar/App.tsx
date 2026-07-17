@@ -8,7 +8,7 @@ import {
 } from "@mui/material";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { buildLightDarkTheme, colors } from "../lib/theme";
+import { buildLightDarkTheme, colors, lightColors } from "../lib/theme";
 import { AppIcon, AppIconButton, ThemeRoot } from "../components";
 
 export default function Titlebar() {
@@ -17,12 +17,12 @@ export default function Titlebar() {
 
     const theme = useMemo(() => createTheme(
         buildLightDarkTheme(isDark ? "dark" : "light"),
-        { palette: { background: { default: isDark ? colors.bg2 : "#FFFFFF", paper: isDark ? colors.bg2 : "#FFFFFF" } } }
+        { palette: { background: { default: isDark ? colors.bg2 : lightColors.bg2, paper: isDark ? colors.bg2 : lightColors.bg2 } } }
     ), [isDark]);
 
-    const btnColor = isDark ? colors.text2 : "#64748B";
+    const btnColor = isDark ? colors.text2 : colors.text3;
     const btnHoverBg = isDark ? alpha(colors.text, 0.10) : "rgba(0,0,0,0.06)";
-    const btnHoverColor = isDark ? colors.text : "#0F172A";
+    const btnHoverColor = isDark ? colors.text : lightColors.text;
     const btnActiveBg = isDark ? alpha(colors.text, 0.16) : "rgba(0,0,0,0.10)";
     const BTN_SX = {
         width: 32, height: 32, color: btnColor, borderRadius: "6px", flexShrink: 0,
@@ -46,7 +46,7 @@ export default function Titlebar() {
             <Box
                 sx={{
                     height: "100%",
-                    bgcolor: isDark ? colors.bg2 : "#FFFFFF",
+                    bgcolor: isDark ? colors.bg2 : lightColors.bg2,
                     WebkitAppRegion: "drag",
                     display: "flex",
                     alignItems: "center",
@@ -54,7 +54,6 @@ export default function Titlebar() {
                     pr: "148px",
                 } as object}
             >
-                {/* Esquerda: ⋮ menu */}
                 <Tooltip title="Menu" placement="bottom">
                     <AppIconButton
                         onClick={() => window.titlebarAPI.showMenu()}
@@ -65,7 +64,6 @@ export default function Titlebar() {
                     </AppIconButton>
                 </Tooltip>
 
-                {/* Direita: reload */}
                 <Box sx={{ ml: "auto", WebkitAppRegion: "no-drag" } as object}>
                     <Tooltip title={t("titlebar.reload")} placement="bottom">
                         <AppIconButton onClick={handleReload} sx={BTN_SX} aria-label={t("titlebar.reload")}>

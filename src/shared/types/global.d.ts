@@ -30,6 +30,11 @@ declare global {
             setZoom(percent: number): void;
             showAccountSelect?(): void;
             hasSavedAccounts?(): Promise<boolean>;
+            clearCache?(): void;
+        };
+        clearCacheAPI: {
+            confirm(): Promise<void>;
+            cancel(): Promise<void>;
         };
         accountsAPI: {
             list(): Promise<SavedAccount[]>;

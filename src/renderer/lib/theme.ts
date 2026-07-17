@@ -1,30 +1,14 @@
 import { createTheme } from "@mui/material";
+import { colors, lightColors } from "../../shared/colors";
 
-/** Paleta "Professional Dark Desktop" — usada em todo o Electron */
-export const colors = {
-    // Backgrounds
-    bg: "#0F172A",   // fundo principal
-    bg2: "#1E293B",   // cards / papers
-    bg3: "#334155",   // hover / inputs
-    bg4: "#475569",   // bordas / divisores
-
-    // Texto
-    text: "#F1F5F9",
-    text2: "#94A3B8",
-    text3: "#64748B",
-
-    // Marca
-    accent: "#1D4ED8",   // primary
-    accentL: "#60A5FA",   // primary light
-    accentH: "#1E40AF",   // primary dark
-    green: "#10B981",   // tertiary / sucesso
-} as const;
+export { colors, lightColors };
 
 export const baseTheme = createTheme({
     palette: {
         mode: "dark",
         primary: { main: colors.accent, light: colors.accentL, dark: colors.accentH },
         success: { main: colors.green },
+        error: { main: colors.danger },
         background: { default: colors.bg, paper: colors.bg2 },
         text: {
             primary: colors.text,
@@ -110,8 +94,8 @@ export function buildLightDarkTheme(mode: "dark" | "light") {
         palette: {
             mode,
             ...(isDark ? {} : {
-                background: { default: "#EEF2F7", paper: "#FFFFFF" },
-                text: { primary: "#0F172A", secondary: "#475569", disabled: "#94A3B8" },
+                background: { default: lightColors.bg, paper: lightColors.bg2 },
+                text: { primary: lightColors.text, secondary: lightColors.text2, disabled: colors.text2 },
                 divider: "rgba(0,0,0,0.08)",
             }),
         },
