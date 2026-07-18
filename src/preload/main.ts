@@ -42,6 +42,21 @@ try {
 } catch { /* non-fatal */ }
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─── Renderer-side debug logging ─────────────────────────────────────────────
+try {
+    const _rlog = (msg: string) => ipcRenderer.send("debug:rlog", msg);
+
+    _rlog(`[Renderer] loaded url=${window.location.href}`);
+    _rlog(`[Renderer] Realm=${localStorage.getItem("Realm") ?? "null"} Data=${localStorage.getItem("Data") ? "SET" : "null"}`);
+
+    const _origPush = history.pushState.bind(history);
+    const _origReplace = history.replaceState.bind(history);
+    history.pushState = (s, t, url) => { _rlog(`[Renderer] pushState → ${url}`); return _origPush(s, t, url); };
+    history.replaceState = (s, t, url) => { _rlog(`[Renderer] replaceState → ${url}`); return _origReplace(s, t, url); };
+    window.addEventListener("popstate", () => _rlog(`[Renderer] popstate → ${window.location.pathname}`));
+} catch { /* non-fatal */ }
+// ─────────────────────────────────────────────────────────────────────────────
+
 window.electronAPI = {
     platform: process.platform,
     isElectron: true,

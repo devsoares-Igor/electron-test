@@ -2,15 +2,20 @@ import { resolve } from "path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "electron-vite";
 
-const ENVS: Record<string, { appUrl: string; isLocal: boolean }> = {
-    local: { appUrl: "http://localhost:3000/?source=schoolwebv2.ip.tv", isLocal: true },
-    staging: { appUrl: "https://stagingwebv2.ip.tv/", isLocal: false },
-    school: { appUrl: "https://schoolwebv2.ip.tv/", isLocal: false },
-    realms: { appUrl: "https://realmswebv2.ip.tv/", isLocal: false },
+// Cada build (env) precisa de identidade própria — protocolo de deep link e
+// nome de app distintos — para poder ser instalado/aberto lado a lado com os
+// outros ambientes sem que um "roube" o registro de protocolo ou o userData
+// (contas salvas, cache) do outro. `realms` (produção) mantém os valores
+// originais para não quebrar instalações existentes de usuários finais.
+const ENVS: Record<string, { appUrl: string; isLocal: boolean; scheme: string; productName: string }> = {
+    local: { appUrl: "http://localhost:3000/?source=schoolwebv2.ip.tv", isLocal: true, scheme: "realms-local", productName: "Realms Local" },
+    staging: { appUrl: "https://stagingwebv2.ip.tv/", isLocal: false, scheme: "realms-staging", productName: "Realms Staging" },
+    school: { appUrl: "https://schoolwebv2.ip.tv/", isLocal: false, scheme: "realms-school", productName: "Realms School" },
+    realms: { appUrl: "https://realmswebv2.ip.tv/", isLocal: false, scheme: "realms", productName: "Realms" },
 };
 
 const electronEnv = process.env.ELECTRON_ENV || "local";
-const { appUrl, isLocal } = ENVS[electronEnv] ?? ENVS.local;
+const { appUrl, isLocal, scheme, productName } = ENVS[electronEnv] ?? ENVS.local;
 const devtoolsPassword = process.env.DEVTOOLS_PASSWORD || "realms-dev";
 const sourceHost = new URL(
     appUrl.startsWith("http://localhost") ? "http://schoolwebv2.ip.tv" : appUrl,
@@ -25,7 +30,12 @@ const sharedDefine = {
 
 export default defineConfig({
     main: {
-        define: { ...sharedDefine, __DEVTOOLS_PASSWORD__: JSON.stringify(devtoolsPassword) },
+        define: {
+            ...sharedDefine,
+            __DEVTOOLS_PASSWORD__: JSON.stringify(devtoolsPassword),
+            __PROTOCOL_SCHEME__: JSON.stringify(scheme),
+            __PRODUCT_NAME__: JSON.stringify(productName),
+        },
         build: { sourcemap: true, externalizeDeps: true },
     },
     preload: {

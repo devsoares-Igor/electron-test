@@ -1,10 +1,31 @@
 import path from "path";
+import { appendFileSync } from "fs";
 import { centerOnDisplay } from "./screen-utils";
-import { APP_HOST, APP_URL, IS_LOCAL } from "./config";
 import { colors, lightColors } from "../shared/colors";
 import { SessionManager } from "./accounts/SessionManager";
+import { APP_HOST, APP_URL, CURRENT_ENV, IS_LOCAL } from "./config";
 import { resolveLocale, resolveWebLocale, getCachedWebLocale } from "./locale";
 import { BrowserWindow, ipcMain, shell, WebContentsView, nativeTheme } from "electron";
+
+const logFile = path.join(
+    process.env.USERPROFILE || process.env.HOME || ".",
+    "Desktop", `deeplink-debug-${CURRENT_ENV}.txt`
+);
+function dlog(msg: string) {
+    const line = `[${new Date().toISOString()}] ${msg}\n`;
+    try { appendFileSync(logFile, line, "utf-8"); } catch { }
+}
+
+// Flag de supressão — pode ser setada de fora (ex: handleDeepLink em index.ts)
+let _suppressAccountSelect = false;
+let _suppressTimer: ReturnType<typeof setTimeout> | null = null;
+
+export function suppressAccountSelectFor(ms: number): void {
+    if (_suppressTimer) clearTimeout(_suppressTimer);
+    _suppressAccountSelect = true;
+    dlog(`[Suppress] accountSelect suppressed for ${ms}ms`);
+    _suppressTimer = setTimeout(() => { _suppressAccountSelect = false; _suppressTimer = null; }, ms);
+}
 
 export const TB_HEIGHT = 32;
 
@@ -20,13 +41,13 @@ function overlayColors(isDark: boolean) {
 const ALLOWED_PERMISSIONS = [
     "media",
     "camera",
+    "fullscreen",
     "microphone",
     "audioOutput",
     "audioCapture",
     "notifications",
     "display-capture",
     "screen-wake-lock",
-    "fullscreen",
 ];
 
 function applyPermissions(win: BrowserWindow): void {
@@ -173,16 +194,43 @@ export function createWindow(): { win: BrowserWindow; view: WebContentsView } {
     ipcMain.on("accounts:load-app", loadApp);
     ipcMain.on("accounts:show-select", loadAccountSelect);
 
+    let loadAccountSelectTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const onLoginNavigation = (url: string) => {
+        try {
+            const { pathname } = new URL(url);
+            const navMsg = `[Navigation] pathname=${pathname} suppress=${_suppressAccountSelect} accounts=${SessionManager.count()}`;
+            console.log(navMsg);
+            dlog(navMsg);
+
+            // Cancela timer pendente se o webapp navegou para fora de /login
+            if (pathname !== "/login" && pathname !== "/login/") {
+                if (loadAccountSelectTimer) {
+                    clearTimeout(loadAccountSelectTimer);
+                    loadAccountSelectTimer = null;
+                }
+            }
+
+            if ((pathname === "/login" || pathname === "/login/") && SessionManager.count() > 0) {
+                if (_suppressAccountSelect) return;
+                loadAccountSelectTimer = setTimeout(loadAccountSelect, 400);
+            }
+        } catch { }
+    };
+
     view.webContents.on("did-navigate", (_e, url) => {
         try {
             if (!url.includes("offline.html") && !url.startsWith("file://")) {
                 resolveWebLocale(view).catch(() => { });
             }
-            const { pathname } = new URL(url);
-            if ((pathname === "/login" || pathname === "/login/") && SessionManager.count() > 0) {
-                setTimeout(loadAccountSelect, 150);
-            }
         } catch { }
+        onLoginNavigation(url);
+    });
+
+    // React Router usa replaceState/pushState → dispara did-navigate-in-page
+    view.webContents.on("did-navigate-in-page", (_e, url, isMainFrame) => {
+        if (!isMainFrame) return;
+        onLoginNavigation(url);
     });
 
     // Startup
